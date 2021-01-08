@@ -1,0 +1,41 @@
+{
+    "name": "wapplr-authentication",
+    "description": "An authentication service for Wapplr",
+    "license": "MIT",
+    "dependencies": {
+        "bcrypt": "^5.0.0",
+        "cookie-parser": "^1.4.5",
+        "cookie-signature": "^1.1.0",
+        "body-parser": "^1.19.0",
+        "express-session": "^1.17.1",
+        "wapplr": "^1.0.0",
+        "wapplr-posttypes": "^1.0.0"
+    },
+    "devDependencies": {
+        "wapplr-cli": "^1.0.0"
+    },
+    "engines": {
+        "node": ">=12.0.0"
+    },
+    "browserslist": [
+        ">1%",
+        "last 4 versions",
+        "Firefox ESR",
+        "not ie < 9"
+    ],
+    "scripts": {
+        "wapplr-authentication start": "wapplr-cli start",
+        "wapplr-authentication build": "wapplr-cli build",
+        "wapplr-authentication clean": "wapplr-cli clean"
+    },
+    "version": "1.0.0",
+    "files": [
+        "dist/*"
+    ],
+    "main": "dist/server",
+    "browser": "dist/client",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/wapplr/wapplr-authentication.git"
+    }
+}
