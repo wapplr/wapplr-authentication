@@ -1,6 +1,6 @@
-import session from 'express-session';
-import connectMongo from 'connect-mongo';
-import cookieSignature from 'cookie-signature';
+import session from "express-session";
+import connectMongo from "connect-mongo";
+import cookieSignature from "cookie-signature";
 import {defaultDescriptor} from "./utils";
 
 function getDefaultSessionMiddleware(p = {}) {
@@ -16,7 +16,7 @@ function getDefaultSessionMiddleware(p = {}) {
         secret: cookieSecret,
         name: cookieName,
         resave: false,
-        saveUninitialized: false,
+        saveUninitialized: false
     };
 
     if (cookieOptions){
@@ -25,7 +25,13 @@ function getDefaultSessionMiddleware(p = {}) {
         }
     }
 
-    return session(sessionOptions)
+    const expressSessionMiddleware = session(sessionOptions);
+
+    return async function sessionMiddleware(req, res, next){
+        expressSessionMiddleware(req, res, async function () {
+            await next();
+        })
+    }
 
 }
 
@@ -56,6 +62,13 @@ export default function createSessionManager(p = {}) {
             enumerable: false,
             value: cookieOptions
         },
+        getUser: {
+            ...defaultDescriptor,
+            enumerable: false,
+            value: getUser || async function getUser({modelName, _id}){
+                return null;
+            }
+        },
         mongooseConnection: {
             ...defaultDescriptor,
             enumerable: false,
@@ -72,10 +85,16 @@ export default function createSessionManager(p = {}) {
             value: async function populateItemMiddleware(req, res, next) {
                 const user = await sessionManager.getAuthedItem(req, getUser);
                 if (!user) {
-                    return next();
+                    if (next) {
+                        return next();
+                    }
+                    return null;
                 }
                 req.user = user;
-                next();
+                if (next) {
+                    return next();
+                }
+                return user;
             }
         },
         getAuthedItem: {
@@ -88,7 +107,7 @@ export default function createSessionManager(p = {}) {
                 }
                 let user;
                 try {
-                    user = await getUser({modelName: req.session.modelName, id: req.session.userId})
+                    user = await getUser({modelName: req.session.modelName, _id: req.session.userId});
                 } catch (e) {
                     return;
                 }

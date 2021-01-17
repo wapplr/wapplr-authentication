@@ -5,7 +5,7 @@ import {defaultDescriptor} from "./utils";
 
 export default function getSession(p = {}) {
 
-    const {wapp = {}, database} = p;
+    const {wapp, database} = p;
 
     const globals = wapp.globals;
     const {DEV} = globals;
@@ -13,33 +13,28 @@ export default function getSession(p = {}) {
     const server = wapp.server;
     const {app} = server;
 
-    const globalConfig = (server.settings && server.settings.sessionConfig) ? server.settings.sessionConfig : {};
+    const globalConfig = (server.settings && server.settings.session) ? server.settings.session : {};
     const config = (p.config) ? {...globalConfig, ...p.config} : {...globalConfig};
 
     const {
-        cookieSecret = "foo",
+        cookieSecret = "yourHash",
         cookieOptions = {secure: "auto", signed: true, httpOnly: true, maxAge: 7 * 24 * 60 * 60 * 1000},
         cookieName = "wapplr.uid",
-        getUser = async function({modelName, id}) {
+        getUser = async function({modelName, _id}) {
 
             const Model = database.models[modelName];
             if (!Model) {
                 return null;
             }
             let user;
-            try {user = await Model.findOne({"_id": id}).exec();} catch (e) {}
+            try {user = await Model.findOne({"_id": _id}).exec();} catch (e) {}
             if (!user) {
                 return null;
             }
 
-            const r = {
-                ...user._doc,
-                id: user._doc._id,
+            return {
+                ...(user.toObject) ? user.toObject() : user
             };
-
-            delete r._id;
-            delete r.__v;
-            return r;
         },
     } = config;
 
@@ -55,14 +50,33 @@ export default function getSession(p = {}) {
 
         if (!server.session && !config.session) {
 
-            app.use(cookieParser(cookieSecret));
-            app.use(bodyParser.urlencoded({extended: true}));
-            app.use(bodyParser.json());
+            if (!wapp.server.initializedCookieParser) {
+                app.use(cookieParser(cookieSecret));
+                Object.defineProperty(wapp.server, "initializedCookieParser", {
+                    enumerable: false,
+                    writable: false,
+                    configurable: false,
+                    value: true
+                })
+            }
+
+            if (!wapp.server.initializedBodyParser){
+                app.use(bodyParser.urlencoded({extended: true}));
+                app.use(bodyParser.json());
+                Object.defineProperty(wapp.server, "initializedBodyParser", {
+                    enumerable: false,
+                    writable: false,
+                    configurable: false,
+                    value: true
+                })
+            }
+
             if ((!DEV && cookieOptions.secure === "auto") || cookieOptions.secure === true) {
                 if (app.set) {
                     app.set('trust proxy', 1);
                 }
             }
+
             app.use(session.getSessionMiddleware());
 
         }

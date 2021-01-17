@@ -3,13 +3,13 @@
     "description": "An authentication service for Wapplr",
     "license": "MIT",
     "dependencies": {
+        "wapplr": "^1.0.0",
+        "wapplr-posttypes": "^1.0.0",
         "bcrypt": "^5.0.0",
         "cookie-parser": "^1.4.5",
         "cookie-signature": "^1.1.0",
         "body-parser": "^1.19.0",
-        "express-session": "^1.17.1",
-        "wapplr": "^1.0.0",
-        "wapplr-posttypes": "^1.0.0"
+        "express-session": "^1.17.1"
     },
     "devDependencies": {
         "wapplr-cli": "^1.0.0"
@@ -28,7 +28,7 @@
         "wapplr-authentication build": "wapplr-cli build",
         "wapplr-authentication clean": "wapplr-cli clean"
     },
-    "version": "1.0.0",
+    "version": "1.0.2",
     "files": [
         "dist/*"
     ],

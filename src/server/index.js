@@ -3,8 +3,7 @@ import initAuthentication from "./initAuthentication";
 
 export default function createServer(p = {}) {
     const wapp = p.wapp || wapplrServer({...p});
-    initAuthentication({wapp, ...p});
-    return wapp;
+    return initAuthentication({wapp, ...p});
 }
 
 export function createMiddleware(p = {}) {

@@ -1,7 +1,8 @@
 import wapplrPostTypes from "wapplr-posttypes";
 import getSession from "./getSession";
-import getApi from "./getApi";
-import {mergeProperties, defaultDescriptor} from "./utils";
+import getResolvers from "./getResolvers";
+import {mergeProperties, defaultDescriptor, createAnAdmin} from "./utils";
+import defaultMessages from "./defaultMessages";
 
 export default function initAuthentication(p = {}) {
 
@@ -17,26 +18,91 @@ export default function initAuthentication(p = {}) {
                 enumerable: false,
                 value: async function addAuthentication(p = {}) {
 
-                    const {name = "user", ...rest} = p;
+                    const {name = "user", admin, ...rest} = p;
 
                     if (!wapp.server.postTypes){
                         wapplrPostTypes({wapp, name, ...rest});
                     }
 
+                    const namePattern = /^.{1,30}$/;
+                    const emailPattern = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+
                     const postType = await wapp.server.postTypes.getPostType({
                         ...rest,
                         name: name,
                         addIfThereIsNot: true,
+                        config: {
+                            messages: defaultMessages,
+                            ...(rest.config) ? rest.config : {},
+
+                            schemaFields: {
+                                name: {
+                                    first: {
+                                        type: String,
+                                        wapplr: {
+                                            pattern: namePattern,
+                                            required: true
+                                        }
+                                    },
+                                    last: {
+                                        type: String,
+                                        wapplr: {
+                                            pattern: namePattern,
+                                            private: "author"
+                                        }
+                                    }
+                                },
+                                email: {
+                                    type: String,
+                                    wapplr: {
+                                        pattern: emailPattern,
+                                        private: "author",
+                                        required: true
+                                    }
+                                },
+                                emailValidated: {
+                                    type: Boolean,
+                                    default: false,
+                                    wapplr: { readOnly: true, private: "author" }
+                                },
+                                password: {
+                                    type: String,
+                                    wapplr: { disabled: true }
+                                },
+                                passwordRecoveryKey: {
+                                    type: String,
+                                    wapplr: { disabled: true }
+                                },
+                                emailConfirmationKey: {
+                                    type: String,
+                                    wapplr: { disabled: true }
+                                },
+                                ...(rest.config && rest.config.schemaFields) ? rest.config.schemaFields : {}
+                            },
+
+                            requiredDataForStatus: {
+                                name: {
+                                    first: { type: String },
+                                    last: { type: String }
+                                },
+                                email: { type: String },
+                                emailValidated: { type: Boolean },
+                                ...(rest.config && rest.config.requiredDataForStatus) ? rest.config.requiredDataForStatus : {}
+                            },
+
+                            resolvers: {
+                                new: null
+                            },
+
+                        },
                     })
+
+                    getResolvers({wapp, name, ...rest, ...postType});
 
                     const defaultAuthenticationObject = Object.create(Object.prototype, {
                         session: {
                             ...defaultDescriptor,
-                            value: getSession({wapp, ...p, ...postType})
-                        },
-                        api: {
-                            ...defaultDescriptor,
-                            value: getApi({wapp, ...p, ...postType})
+                            value: getSession({wapp, name, ...rest, ...postType})
                         },
                     })
 
@@ -47,6 +113,8 @@ export default function initAuthentication(p = {}) {
                         writable: false,
                         value: defaultAuthenticationObject
                     });
+
+                    createAnAdmin({...defaultAuthenticationObject, admin})
 
                     return server.authentications[name];
 
@@ -74,5 +142,7 @@ export default function initAuthentication(p = {}) {
         });
 
     }
+
+    return server.authentications;
 
 }
