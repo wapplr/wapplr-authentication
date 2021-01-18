@@ -25,7 +25,10 @@ export default function initAuthentication(p = {}) {
                     }
 
                     const namePattern = /^.{1,30}$/;
+
                     const emailPattern = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+
+                    const passwordPattern = /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[a-zA-Z]).{8,256}$/;
 
                     const postType = await wapp.server.postTypes.getPostType({
                         ...rest,
@@ -63,11 +66,17 @@ export default function initAuthentication(p = {}) {
                                 emailValidated: {
                                     type: Boolean,
                                     default: false,
-                                    wapplr: { readOnly: true, private: "author" }
+                                    wapplr: {
+                                        readOnly: true,
+                                        private: "author"
+                                    }
                                 },
                                 password: {
                                     type: String,
-                                    wapplr: { disabled: true }
+                                    wapplr: {
+                                        pattern: passwordPattern,
+                                        disabled: true
+                                    }
                                 },
                                 passwordRecoveryKey: {
                                     type: String,

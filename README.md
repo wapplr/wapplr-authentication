@@ -127,6 +127,7 @@ const user = await wapp.server.authentications.getAuthentication({
             incorrectPassword: "Incorrect password",
             incorrectEmail: "Incorrect e-mail",
             missingPassword: "Missing password",
+            invalidPassword: "Invalid password",
             missingEmail: "Missing e-mail",
             usedEmail: "E-mail was already used",
             alreadyLoggedIn: "You are already logged in to this session",

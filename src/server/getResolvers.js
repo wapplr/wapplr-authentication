@@ -33,24 +33,13 @@ export default function getResolvers(p = {}) {
                 }
             },
             resolve: async function ({input}){
-                const {args, editor, req, res, allRequiredFieldsAreProvided, allFieldsAreValid} = input;
+
+                const {args, editor, req, res, allRequiredFieldsAreProvided, missingFields, allFieldsAreValid, invalidFields} = input;
                 const {password, record} = args;
 
                 if (editor){
                     return {
                         error: {message: messages.alreadyLoggedIn},
-                    }
-                }
-
-                if (!allFieldsAreValid){
-                    return {
-                        error: {message: messages.invalidData + " [" +input.invalidFields.join(", ") +"]"},
-                    }
-                }
-
-                if (!allRequiredFieldsAreProvided){
-                    return {
-                        error: {message: messages.missingData + " [" +input.missingFields.join(", ") +"]"},
                     }
                 }
 
@@ -60,9 +49,38 @@ export default function getResolvers(p = {}) {
                     }
                 }
 
-                if (!password){
+                if (!password || typeof password !== "string"){
                     return {
                         error: {message: messages.missingPassword},
+                    }
+                } else {
+                    let invalidPassword = false;
+
+                    try {
+                        const jsonSchema = Model.getJsonSchema({doNotDeleteDisabledFields: true});
+                        const pattern = jsonSchema.properties.password.wapplr.pattern;
+                        if (pattern && !password.match(pattern)){
+                            invalidPassword = true;
+                        }
+                    } catch (e) {}
+
+                    if (invalidPassword){
+                        return {
+                            error: {message: messages.invalidPassword},
+                        }
+                    }
+
+                }
+
+                if (!allFieldsAreValid){
+                    return {
+                        error: {message: messages.invalidData + " [" +invalidFields.join(", ") +"]"},
+                    }
+                }
+
+                if (!allRequiredFieldsAreProvided){
+                    return {
+                        error: {message: messages.missingData + " [" +missingFields.join(", ") +"]"},
                     }
                 }
 
