@@ -1,5 +1,8 @@
 import mongoose from "mongoose";
 import bcrypt from "bcrypt";
+import {defaultDescriptor as commonDefaultDescriptor} from "../common/utils";
+
+export const defaultDescriptor = commonDefaultDescriptor;
 
 export function mergeProperties(dest, src) {
     Object.getOwnPropertyNames(src).forEach(function forEachOwnPropertyName (name) {
@@ -12,31 +15,31 @@ export function mergeProperties(dest, src) {
     return dest
 }
 
-export const defaultDescriptor = {
-    writable: true,
-    enumerable: true,
-    configurable: false,
-}
+
 
 export async function createAnAdmin({Model, statusManager, admin = {}}) {
     try {
-        const adminExists = await Model.find({[statusManager.statusField]: {$gt: statusManager.getFeaturedStatus() - 1}})
-        if (!adminExists || (adminExists && !adminExists.length)){
-            const {
-                email = "hello@wapplr.com",
-                password = Math.random().toString(36).slice(-8),
-                name = {
-                    first: (admin.name && admin.name.first) ? admin.name.first : "Charlie",
-                    last: (admin.name && admin.name.last) ? admin.name.last : "Wapplr",
-                }
-            } = admin;
-            const userExists = await Model.findOne({email})
-            if (userExists && userExists._id) {
+
+        const {
+            email,
+            password,
+            name = {
+                first: (admin.name && admin.name.first) ? admin.name.first : "Admin",
+            }
+        } = admin;
+
+        const userExists = (email) ? await Model.findOne({email}) : null;
+
+        if ((email && password) || (userExists && userExists._id)){
+
+            if (userExists && userExists._id && !statusManager.isFeatured(userExists)) {
+
                 userExists[statusManager.statusField] = statusManager.getFeaturedStatus();
                 const upgradedUser = await userExists.save()
                 if (upgradedUser){
-                    console.log("[wapplr-authentication]", "Your account with this email ["+email+"] was upgraded to admin")
+                    console.log("[WAPPLR-AUTHENTICATION]", "Your account with this email ["+email+"] was upgraded to admin")
                 }
+
             } else {
 
                 const salt = await bcrypt.genSalt(10);
@@ -58,10 +61,12 @@ export async function createAnAdmin({Model, statusManager, admin = {}}) {
                 const newUser = new Model(newUserData)
                 const savedAdmin = await newUser.save();
                 if (savedAdmin && savedAdmin._id) {
-                    console.log("[WAPPLR-AUTHENTICATION]", "Your admin account created with this data:", {...newUserData, password}, "Password change required")
+                    console.log("[WAPPLR-AUTHENTICATION]", "Your admin account created with this data:", {...newUserData, password})
                 }
             }
+
         }
+
     } catch (e){
         console.log(e)
     }

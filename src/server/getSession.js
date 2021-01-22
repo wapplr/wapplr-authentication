@@ -13,7 +13,7 @@ export default function getSession(p = {}) {
     const server = wapp.server;
     const {app} = server;
 
-    const globalConfig = (server.settings && server.settings.session) ? server.settings.session : {};
+    const globalConfig = (server.config && server.config.session) ? server.config.session : {};
     const config = (p.config) ? {...globalConfig, ...p.config} : {...globalConfig};
 
     const {
@@ -36,6 +36,7 @@ export default function getSession(p = {}) {
                 ...(user.toObject) ? user.toObject() : user
             };
         },
+        disableUseSessionMiddleware,
     } = config;
 
     const session = server.session || config.session || createSessionManager({
@@ -77,7 +78,9 @@ export default function getSession(p = {}) {
                 }
             }
 
-            app.use(session.getSessionMiddleware());
+            if (!disableUseSessionMiddleware) {
+                app.use(session.getSessionMiddleware());
+            }
 
         }
 

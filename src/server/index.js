@@ -7,8 +7,8 @@ export default function createServer(p = {}) {
 }
 
 export function createMiddleware(p = {}) {
-    return async function initAuthenticationMiddleware(req, res, next) {
-        const wapp = req.wapp || p.wapp || createServer(p);
+    return function initAuthenticationMiddleware(req, res, next) {
+        const wapp = req.wapp || p.wapp || createServer(p).wapp;
         initAuthentication({wapp, ...p});
         next();
     }
@@ -26,9 +26,9 @@ const defaultConfig = {
     }
 }
 
-export async function run(p = defaultConfig) {
+export function run(p = defaultConfig) {
 
-    const wapp = await createServer(p);
+    const wapp = createServer(p).wapp;
     const globals = wapp.globals;
     const {DEV} = globals;
 

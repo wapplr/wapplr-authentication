@@ -28,7 +28,7 @@
         "wapplr-authentication build": "wapplr-cli build",
         "wapplr-authentication clean": "wapplr-cli clean"
     },
-    "version": "1.0.3",
+    "version": "1.0.5",
     "files": [
         "dist/*"
     ],

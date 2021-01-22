@@ -3,6 +3,7 @@ import getSession from "./getSession";
 import getResolvers from "./getResolvers";
 import {mergeProperties, defaultDescriptor, createAnAdmin} from "./utils";
 import defaultMessages from "./defaultMessages";
+import addStatesHandle from "../common/addStatesHandle";
 
 export default function initAuthentication(p = {}) {
 
@@ -90,7 +91,6 @@ export default function initAuthentication(p = {}) {
                             requiredDataForStatus: {
                                 name: {
                                     first: { type: String },
-                                    last: { type: String }
                                 },
                                 email: { type: String },
                                 emailValidated: { type: Boolean },
@@ -121,7 +121,9 @@ export default function initAuthentication(p = {}) {
                         value: defaultAuthenticationObject
                     });
 
-                    createAnAdmin({...defaultAuthenticationObject, admin})
+                    if (admin) {
+                        await createAnAdmin({...defaultAuthenticationObject, admin});
+                    }
 
                     return server.authentications[name];
 
@@ -147,6 +149,10 @@ export default function initAuthentication(p = {}) {
             writable: false,
             value: defaultAuthenticationsObject
         });
+
+        Object.defineProperty(server.authentications, "wapp", {...defaultDescriptor, writable: false, enumerable: false, value: wapp});
+
+        addStatesHandle({wapp})
 
     }
 

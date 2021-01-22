@@ -99,8 +99,7 @@ const user = await wapp.server.authentications.getAuthentication({
         statusField: "_status",
         requiredDataForStatus: {
             name: {
-                first: { type: String },
-                last: { type: String }
+                first: { type: String }
             },
             email: { type: String },
             emailValidated: { type: Boolean },

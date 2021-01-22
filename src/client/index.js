@@ -1,14 +1,15 @@
 import wapplrClient from "wapplr";
+import initAuthentication from "./initAuthentication"; 
 
 export default function createClient(p) {
-    return p.wapp || wapplrClient({...p});
+    const wapp = p.wapp || wapplrClient({...p});
+    return initAuthentication({wapp, ...p});
 }
 
 export function createMiddleware(p = {}) {
-    // noinspection JSUnusedAssignment,JSUnusedLocalSymbols
-    return function authenticationMiddleware(req, res, next) {
-        // eslint-disable-next-line no-unused-vars
-        const wapp = req.wapp || p.wapp || createClient(p);
+    return function initAuthenticationMiddleware(req, res, next) {
+        const wapp = req.wapp || p.wapp || createClient(p).wapp;
+        initAuthentication({wapp, ...p});
         next();
     }
 }
@@ -27,7 +28,7 @@ const defaultConfig = {
 
 export function run(p = defaultConfig) {
 
-    const wapp = createClient(p);
+    const wapp = createClient(p).wapp;
     const globals = wapp.globals;
     const {DEV} = globals;
 
