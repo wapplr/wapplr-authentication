@@ -121,14 +121,14 @@ const user = await wapp.server.authentications.getAuthentication({
             statusRequiredData: "required data is not provided",
             statusApproved: "approved",
             statusFeatured: "admin",
-            
+
             savePostDefaultFail: "Sorry, there was an issue save the entry, please try again",
             invalidData: "Invalid data",
             missingData: "Missing data",
             lowStatusLevel: "Your status level is too low to perform the operation",
             postNotFound: "User not found",
             accessDenied: "You do not have permission to perform that operation",
-            
+
             signFail: "Sorry, there was an issue signing you in, please try again",
             incorrectPassword: "Incorrect password",
             incorrectEmail: "Incorrect e-mail",
@@ -139,23 +139,17 @@ const user = await wapp.server.authentications.getAuthentication({
             alreadyLoggedIn: "You are already logged in to this session",
             thereWasNoUser: "there was no user in the session"
         },
-        
-        resolvers: function(p = {}) {
-            const {modelName, Model} = p;
-            return {
-                ["getAll"]: {
-                    type: "["+modelName+"]",
-                    resolve: async function(p = {}) {
-                        // eslint-disable-next-line no-unused-vars
-                        const {args = {}} = p;
-                        const users = await Model.find();
-                        if (!users || (users && !users.length)){
-                            return [];
-                        }
-                        return users;
+
+        resolvers: {
+            getAll: function ({Model}) { 
+                return {
+                    extendResolver: "findMany",
+                    args: null,
+                    resolve: async function({input}) {
+                        return await Model.find().sort({score: -1, time: 1});
                     }
-                },
-            }
+                }
+            },
         }
     }
 })
@@ -165,6 +159,23 @@ wapp.server.listen();
 
 ```js
 //client.js
+import wapplrClient from "wapplr";
+import wapplrAuthentication from "wapplr-authentication";
+
+const wapp = wapplrClient({config: {
+        globals: {
+            WAPP: "yourBuildHash"
+        }
+    }
+});
+
+wapp.client.authentications.getAuthentication({
+    name: "user",
+    addIfThereIsNot: true
+});
+
+wapp.client.listen();
+
 /*...*/
 const send = wapp.requests.send;
 const response = await send({requestName:"userGetAll"});

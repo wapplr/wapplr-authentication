@@ -6,20 +6,18 @@ export default function initAuthentication(p = {}) {
     const {wapp} = p;
     const client = wapp.client;
 
-    if (!wapp._originalResetRequest){
-        Object.defineProperty(wapp, "_originalResetRequest", {
-            ...defaultDescriptor,
-            writable: false,
-            enumerable: false,
-            value: wapp.resetRequest
-        })
-    }
+    let lastRequest = null;
 
-    wapp.resetRequest = function (...attributes) {
-        let lastUser = wapp.request.user;
-        wapp._originalResetRequest(...attributes);
-        wapp.request.user = lastUser;
-    }
+    wapp.middleware.addHandle({
+        user: function (req, res, next) {
+            if (lastRequest?.user?._id){
+                req.wappRequest.user = lastRequest.user;
+                req.user = req.wappRequest.user;
+            }
+            lastRequest = req.wappRequest;
+            next()
+        }
+    })
 
     if (!client.authentications) {
 
@@ -43,48 +41,56 @@ export default function initAuthentication(p = {}) {
                                     wapp.states.addHandle({
                                         [statesHandleName]: function (req, res, next) {
 
-                                            if (!client.authentications[name].unsubscribe) {
+                                            const wappResponse = res.wappResponse;
+                                            const wappRequest = req.wappRequest;
 
-                                                const unsubscribe = wapp.states.store.subscribe(function (state, {type, payload}) {
-                                                    if (type === "INS_RES" && payload.name === "responses"){
+                                            if (client.authentications[name].unsubscribe){
+                                                client.authentications[name].unsubscribe();
+                                            }
 
-                                                        const keys = [name+"Login", name+"Logout", name+"Signup"];
-                                                        const stateBeforeUserId = state.req.user?._id;
-                                                        const response = payload.value;
+                                            const unsubscribe = wappResponse.store.subscribe(function (state, {type, payload}) {
 
-                                                        keys.forEach(function (requestName) {
-                                                            if (response && response[requestName] && typeof response[requestName].record !== "undefined"){
+                                                if (type === "INS_RES" && payload.name === "responses"){
 
-                                                                const isLogout = (requestName === name+"Logout");
+                                                    const keys = [name+"Login", name+"Logout", name+"Signup"];
+                                                    const stateBeforeUserId = state.req.user?._id;
+                                                    const response = payload.value;
 
-                                                                let userId = response[requestName].record?._id;
-                                                                if (isLogout && userId) {
-                                                                    userId = null;
-                                                                }
+                                                    keys.forEach(function (requestName) {
+                                                        if (response && response[requestName] && typeof response[requestName].record !== "undefined"){
 
-                                                                const changed = !((userId && stateBeforeUserId && stateBeforeUserId.toString() === userId.toString()) || (!userId && !stateBeforeUserId));
+                                                            const isLogout = (requestName === name+"Logout");
 
-                                                                if (changed) {
-                                                                    const newUser = (response[requestName].record?._id && !isLogout) ? {...response[requestName].record} : null;
-                                                                    wapp.states.store.dispatch(wapp.states.runAction("req", {
-                                                                        name: "user",
-                                                                        value: newUser
-                                                                    }))
-                                                                    wapp.response.state = wapp.states.store.getState();
-                                                                    wapp.request.user = newUser;
-                                                                    wapp.request.req.user = newUser;
-                                                                }
+                                                            let userId = response[requestName].record?._id;
+                                                            if (isLogout && userId) {
+                                                                userId = null;
+                                                            }
+
+                                                            const changed = !((userId && stateBeforeUserId && stateBeforeUserId.toString() === userId.toString()) || (!userId && !stateBeforeUserId));
+
+                                                            if (changed) {
+
+                                                                const newUser = (response[requestName].record?._id && !isLogout) ? {...response[requestName].record} : null;
+
+                                                                wappResponse.store.dispatch(wapp.states.runAction("req", {
+                                                                    name: "user",
+                                                                    value: newUser
+                                                                }))
+                                                                wappResponse.state = wappResponse.store.getState();
+
+                                                                wappRequest.user = newUser;
+                                                                req.user = wappRequest.user;
 
                                                             }
-                                                        })
-                                                    }
-                                                })
 
-                                                client.authentications[name].unsubscribe = function() {
-                                                    unsubscribe();
-                                                    client.authentications[name].unsubscribe = null;
+                                                        }
+                                                    })
                                                 }
+                                            })
 
+                                            client.authentications[name].unsubscribe = function() {
+                                                unsubscribe();
+                                                client.authentications[name].unsubscribe = null;
                                             }
 
                                             next();

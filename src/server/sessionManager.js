@@ -91,7 +91,7 @@ export default function createSessionManager(p = {}) {
                     return null;
                 }
                 req.user = user;
-                req.wapp.request.user = user;
+                req.wappRequest.user = user;
                 if (next) {
                     return next();
                 }
@@ -149,7 +149,7 @@ export default function createSessionManager(p = {}) {
                 return new Promise(function (resolve, reject) {
                     return req.session.destroy(function(err) {
                         req.user = null;
-                        req.wapp.request.user = null;
+                        req.wappRequest.user = null;
                         res.clearCookie(sessionManager.cookieName);
                         if (err) {
                             return reject(err);
