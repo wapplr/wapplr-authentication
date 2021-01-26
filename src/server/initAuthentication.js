@@ -98,7 +98,8 @@ export default function initAuthentication(p = {}) {
                             },
 
                             resolvers: {
-                                new: null
+                                new: null,
+                                ...(rest.config && rest.config.postTypeResolvers) ? rest.config.postTypeResolvers : {}
                             },
 
                         },
