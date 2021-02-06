@@ -4,6 +4,7 @@ import {getHelpersForResolvers} from "wapplr-posttypes/dist/server/getResolvers.
 
 import defaultMessages from "./defaultMessages";
 import getSession from "./getSession";
+import getCrypto from "./crypto";
 
 export default function getResolvers(p = {}) {
 
@@ -13,11 +14,25 @@ export default function getResolvers(p = {}) {
 
     const {
         messages = defaultMessages,
+        mailer = {
+            send: async function (type, data, input) {
+                console.log("[WAPPLR-AUTHENTICATION] No email module installed", type);
+                return new Promise(function (resolve) {return resolve();})
+            }
+        }
     } = config;
+
+    const globalConfig = (wapp.server.config && wapp.server.config.session) ? wapp.server.config.session : {};
+    const sessionConfig = (p.config) ? {...globalConfig, ...p.config} : {...globalConfig};
+
+    const {
+        cookieSecret = "yourHash",
+    } = sessionConfig;
 
     const session = getSession(p);
 
     const {setRestoreStatusByAuthor, isDeleted} = statusManager;
+    const crypto = getCrypto({password: cookieSecret});
 
     const resolvers = {
         signup: {
@@ -28,14 +43,15 @@ export default function getResolvers(p = {}) {
                 const defaultRecord = defaultResolver.args.record;
 
                 return {
+                    email: "String!",
                     password: "String!",
                     record: defaultRecord
                 }
             },
             resolve: async function ({input}){
 
-                const {args, editor, req, res, allRequiredFieldsAreProvided, missingFields, allFieldsAreValid, invalidFields} = input;
-                const {password, record} = args;
+                const {args, editor, req, res, allRequiredFieldsAreProvided, missingFields, allFieldsAreValid, invalidFields, mergedErrorFields} = input;
+                const {password, email, record} = args;
 
                 if (editor){
                     return {
@@ -43,54 +59,63 @@ export default function getResolvers(p = {}) {
                     }
                 }
 
-                if (!record.email){
-                    return {
-                        error: {message: messages.missingEmail},
-                    }
-                }
+                let invalidPassword = false;
+                let validationMessageForPassword = messages.invalidPassword;
+                const missingPassword = (!password || typeof password !== "string");
 
-                if (!password || typeof password !== "string"){
-                    return {
-                        error: {message: messages.missingPassword},
-                    }
-                } else {
-                    let invalidPassword = false;
-
+                if (!missingPassword) {
                     try {
                         const jsonSchema = Model.getJsonSchema({doNotDeleteDisabledFields: true});
-                        const pattern = jsonSchema.properties.password.wapplr.pattern;
-                        if (pattern && !password.match(pattern)){
+                        const pattern = jsonSchema.properties.password?.wapplr?.pattern;
+                        if (pattern && !password.match(pattern)) {
+                            validationMessageForPassword = jsonSchema.properties.password?.wapplr?.validationMessage;
                             invalidPassword = true;
                         }
                     } catch (e) {}
+                }
 
-                    if (invalidPassword){
-                        return {
-                            error: {message: messages.invalidPassword},
+                let invalidEmail = false;
+                let validationMessageForEmail = messages.invalidEmail;
+                const missingEmail = (!email || typeof email !== "string");
+
+                if (!missingEmail) {
+                    try {
+                        const jsonSchema = Model.getJsonSchema({doNotDeleteDisabledFields: true});
+                        const pattern = jsonSchema.properties.email?.wapplr?.pattern;
+                        if (pattern && !email.match(pattern)) {
+                            validationMessageForEmail = jsonSchema.properties.email?.wapplr?.validationMessage;
+                            invalidEmail = true;
                         }
-                    }
-
+                    } catch (e) {}
                 }
 
-                if (!allFieldsAreValid){
+                if (!allFieldsAreValid || !allRequiredFieldsAreProvided || missingPassword || invalidPassword || missingEmail || invalidEmail){
                     return {
-                        error: {message: messages.invalidData + " [" +invalidFields.join(", ") +"]"},
-                    }
-                }
+                        error: {
+                            message: (!allRequiredFieldsAreProvided) ? messages.missingData : messages.invalidData,
+                            errors: [
+                                ...mergedErrorFields,
 
-                if (!allRequiredFieldsAreProvided){
-                    return {
-                        error: {message: messages.missingData + " [" +missingFields.join(", ") +"]"},
+                                ...(missingPassword) ? [{path: "password", message: messages.missingPassword}] : [],
+                                ...(!missingPassword && invalidPassword) ? [{path: "password", message: validationMessageForPassword}] : [],
+
+                                ...(missingEmail) ? [{path: "email", message: messages.missingEmail}] : [],
+                                ...(!missingEmail && invalidEmail) ? [{path: "email", message: validationMessageForEmail}] : []
+                            ]
+                        },
                     }
                 }
 
                 try {
 
-                    const existsUser = await Model.findOne({email: record.email});
+                    const existsUser = await Model.findOne({email: email});
 
                     if (existsUser){
                         return {
-                            error: {message: messages.usedEmail},
+                            error: {
+                                message: messages.usedEmail,
+                                errors: [{path:"email"}]
+                            },
                         }
                     }
 
@@ -103,6 +128,7 @@ export default function getResolvers(p = {}) {
                         _id: newId,
                         _author: newId,
                         _createdDate: new Date(),
+                        email: email,
                         password: hashedPassword,
                     });
 
@@ -159,12 +185,18 @@ export default function getResolvers(p = {}) {
 
                         } else {
                             return {
-                                error: {message: messages.incorrectPassword},
+                                error: {
+                                    message: messages.incorrectPassword,
+                                    errors: [{path: "password"}]
+                                },
                             }
                         }
                     } else {
                         return {
-                            error: {message: messages.incorrectEmail},
+                            error: {
+                                message: messages.incorrectEmail,
+                                errors: [{path: "email"}]
+                            },
                         }
                     }
                 } catch (e) {
@@ -181,7 +213,7 @@ export default function getResolvers(p = {}) {
                 const {editor, req, res} = input;
                 let user;
                 if (editor){
-                    user = await Model.findById(editor)
+                    user = editor;
                 }
                 if (user && user._id){
                     await session.endAuthedSession(req, res);
@@ -196,16 +228,286 @@ export default function getResolvers(p = {}) {
                 }
             },
         },
-        me: {
-            extendResolver: "findById",
-            args: null,
+        forgotPassword: {
+            extendResolver: "updateById",
+            args: {
+                email: "String!",
+            },
             resolve: async function ({input}) {
-                const {editor} = input;
-                if (editor){
-                    return await Model.findById(editor)
+                try {
+                    const {post, args, req, res, editorIsAuthor, editor} = input;
+                    const user = post;
+
+                    if ((user && editorIsAuthor) || (user && !editor)) {
+
+                        user.passwordRecoveryKey = crypto.encrypt(JSON.stringify({time: Date.now(), _id: user._id}));
+                        const savedUser = await user.save();
+
+                        await mailer.send("forgotPassword", savedUser, input)
+
+                        return {
+                            record: {
+                                _id: (user && editorIsAuthor) ? savedUser._id : savedUser.email,
+                                email: savedUser.email
+                            }
+                        }
+
+                    } else {
+                        return {
+                            error: {
+                                message: messages.incorrectEmail,
+                                errors: [{path: "email"}]
+                            },
+                        }
+                    }
+                } catch (e) {
+                    return {
+                        error: {message: e.message || messages.signFail},
+                    }
                 }
-                return null;
-            }
+            },
+        },
+        resetPassword: {
+            extendResolver: "updateById",
+            args: {
+                email: "String!",
+                passwordRecoveryKey: "String!",
+                password: "String!",
+            },
+            resolve: async function ({input}) {
+                try {
+                    const {post, args, req, res, editorIsAuthor, editor} = input;
+                    const {password, passwordRecoveryKey} = args;
+
+                    const user = post;
+
+                    if (!user){
+                        return {
+                            error: {
+                                message: messages.incorrectEmail,
+                                errors: [{path: "email"}]
+                            },
+                        }
+                    }
+
+                    if (!(editorIsAuthor || !editor)){
+                        return {
+                            error: {
+                                message: messages.accessDenied
+                            },
+                        }
+                    }
+
+
+                    let invalidPassword = false;
+                    let validationMessageForPassword = messages.invalidPassword;
+                    const missingPassword = (!password || typeof password !== "string");
+
+                    if (!missingPassword) {
+                        try {
+                            const jsonSchema = Model.getJsonSchema({doNotDeleteDisabledFields: true});
+                            const pattern = jsonSchema.properties.password?.wapplr?.pattern;
+                            if (pattern && !password.match(pattern)) {
+                                validationMessageForPassword = jsonSchema.properties.password?.wapplr?.validationMessage;
+                                invalidPassword = true;
+                            }
+                        } catch (e) {}
+                    }
+
+                    const missingPasswordRecoveryKey = (!passwordRecoveryKey || typeof passwordRecoveryKey !== "string");
+
+                    if (missingPassword || invalidPassword || missingPasswordRecoveryKey){
+                        return {
+                            error: {
+                                message: (!missingPassword && invalidPassword) ? validationMessageForPassword : (missingPassword) ? messages.missingPassword : messages.invalidPassword,
+                                errors: [
+                                    ...(missingPassword) ? [{path: "password", message: messages.missingPassword}] : [],
+                                    ...(!missingPassword && invalidPassword) ? [{path: "password", message: validationMessageForPassword}] : [],
+                                    ...(missingPasswordRecoveryKey) ? [{path: "passwordRecoveryKey", message: messages.missingPasswordRecoveryKey}] : []
+                                ]
+                            },
+                        }
+                    }
+
+                    const isMatch = (user.passwordRecoveryKey === passwordRecoveryKey);
+
+                    if (isMatch) {
+
+                        const salt = await bcrypt.genSalt(10);
+                        user.password = await bcrypt.hash(password, salt);
+                        user.passwordRecoveryKey = null;
+
+                        if (isDeleted(user)) {
+                            setRestoreStatusByAuthor(user);
+                        }
+
+                        const savedUser = await user.save();
+
+                        if (editorIsAuthor) {
+                            return {
+                                record: savedUser,
+                            }
+                        } else {
+
+                            await session.startAuthedSession(req, {userId: savedUser._id, modelName: Model.modelName});
+                            const populatedUser = await session.populateItemMiddleware(req, res);
+
+                            return {
+                                record: populatedUser,
+                            }
+
+                        }
+
+                    } else {
+                        return {
+                            error: {
+                                message: messages.incorrectPasswordRecoveryKey,
+                                errors: [{path: "passwordRecoveryKey"}]
+                            },
+                        }
+                    }
+
+                } catch (e) {
+                    return {
+                        error: {message: e.message || messages.signFail},
+                    }
+                }
+            },
+        },
+        changeEmail: {
+            extendResolver: "updateById",
+            args: {
+                _id: "MongoID!",
+                email: "String!",
+                password: "String!",
+            },
+            resolve: async function ({input}) {
+                try {
+                    const {post, args, req, res, editorIsAuthor} = input;
+
+                    const {email, password} = args;
+
+                    if (!post){
+                        return {
+                            error: {message: messages.postNotFound},
+                        }
+                    }
+
+                    if (!editorIsAuthor){
+                        return {
+                            error: {message: messages.accessDenied},
+                        }
+                    }
+
+                    let invalidPassword = false;
+                    let validationMessageForPassword = messages.invalidPassword;
+                    const missingPassword = (!password || typeof password !== "string");
+
+                    if (!missingPassword) {
+                        try {
+                            const jsonSchema = Model.getJsonSchema({doNotDeleteDisabledFields: true});
+                            const pattern = jsonSchema.properties.password?.wapplr?.pattern;
+                            if (pattern && !password.match(pattern)) {
+                                validationMessageForPassword = jsonSchema.properties.password?.wapplr?.validationMessage;
+                                invalidPassword = true;
+                            }
+                        } catch (e) {}
+                    }
+
+                    let invalidEmail = false;
+                    let validationMessageForEmail = messages.invalidEmail;
+                    const missingEmail = (!email || typeof email !== "string");
+
+                    if (!missingEmail) {
+                        try {
+                            const jsonSchema = Model.getJsonSchema({doNotDeleteDisabledFields: true});
+                            const pattern = jsonSchema.properties.email?.wapplr?.pattern;
+                            if (pattern && !email.match(pattern)) {
+                                validationMessageForEmail = jsonSchema.properties.email?.wapplr?.validationMessage;
+                                invalidEmail = true;
+                            }
+                        } catch (e) {}
+                    }
+
+                    if (missingPassword || invalidPassword || missingEmail || invalidEmail){
+                        return {
+                            error: {
+                                message: (missingPassword || missingEmail) ? messages.missingData : messages.invalidData,
+                                errors: [
+
+                                    ...(missingPassword) ? [{path: "password", message: messages.missingPassword}] : [],
+                                    ...(!missingPassword && invalidPassword) ? [{path: "password", message: validationMessageForPassword}] : [],
+
+                                    ...(missingEmail) ? [{path: "email", message: messages.missingEmail}] : [],
+                                    ...(!missingEmail && invalidEmail) ? [{path: "email", message: validationMessageForEmail}] : []
+                                ]
+                            },
+                        }
+                    }
+
+                    try {
+
+                        const user = post;
+
+                        const noChanges = (user.email === email);
+
+                        if (noChanges){
+                            return {
+                                error: {
+                                    message: messages.noChanges,
+                                    errors: [{path: "email"}]
+                                },
+                            }
+                        }
+
+                        const isMatch = await bcrypt.compare(args.password, user.password);
+                        if (isMatch) {
+
+                            const existsUser = await Model.findOne({email: email});
+
+                            if (existsUser){
+                                return {
+                                    error: {
+                                        message: messages.usedEmail,
+                                        errors: [{path:"email"}]
+                                    },
+                                }
+                            }
+
+                            user.email = email;
+
+                            if (isDeleted(user)) {
+                                setRestoreStatusByAuthor(user);
+                            }
+
+                            const savedUser = await user.save();
+
+                            return {
+                                record: savedUser,
+                            }
+
+                        } else {
+                            return {
+                                error: {
+                                    message: messages.incorrectPassword,
+                                    errors: [{path: "password"}]
+                                },
+                            }
+                        }
+
+                    } catch (e){
+                        return {
+                            error: {message: e.message || messages.savePostDefaultFail},
+                        }
+                    }
+
+
+                } catch (e) {
+                    return {
+                        error: {message: e.message || messages.signFail},
+                    }
+                }
+            },
         },
         ...(config.resolvers) ? config.resolvers : {}
     }

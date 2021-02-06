@@ -2,8 +2,8 @@ import wapplrPostTypes from "wapplr-posttypes";
 import getSession from "./getSession";
 import getResolvers from "./getResolvers";
 import {mergeProperties, defaultDescriptor, createAnAdmin} from "./utils";
-import defaultMessages from "./defaultMessages";
-import addStatesHandle from "../common/addStatesHandle";
+import defaultMessages, {defaultLabels} from "./defaultMessages";
+import addStatesHandle from "./addStatesHandle";
 
 export default function initAuthentication(p = {}) {
 
@@ -29,52 +29,49 @@ export default function initAuthentication(p = {}) {
                     const emailPattern = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
                     const passwordPattern = /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[a-zA-Z]).{8,256}$/;
 
+                    const messages = rest?.config?.messages || defaultMessages;
+                    const labels = rest?.config?.labels || defaultLabels;
+
                     const postType = await wapp.server.postTypes.getPostType({
                         ...rest,
                         name: name,
                         addIfThereIsNot: true,
                         config: {
-                            messages: defaultMessages,
                             ...(rest.config) ? rest.config : {},
 
+                            messages: messages,
+
                             schemaFields: {
-                                name: {
-                                    first: {
-                                        type: String,
-                                        wapplr: {
-                                            pattern: namePattern,
-                                            required: true
-                                        }
-                                    },
-                                    last: {
-                                        type: String,
-                                        wapplr: {
-                                            pattern: namePattern,
-                                            private: "author"
-                                        }
-                                    }
-                                },
                                 email: {
                                     type: String,
                                     wapplr: {
                                         pattern: emailPattern,
+                                        validationMessage: messages.validationEmail,
                                         private: "author",
-                                        required: true
+                                        readOnly: true,
+                                        formData: {
+                                            label: labels.email
+                                        }
                                     }
                                 },
                                 emailValidated: {
                                     type: Boolean,
                                     default: false,
                                     wapplr: {
+                                        private: "author",
                                         readOnly: true,
-                                        private: "author"
                                     }
                                 },
                                 password: {
                                     type: String,
                                     wapplr: {
                                         pattern: passwordPattern,
-                                        disabled: true
+                                        validationMessage: messages.validationPassword,
+                                        disabled: true,
+                                        formData: {
+                                            label: labels.password,
+                                            type: "password"
+                                        }
                                     }
                                 },
                                 passwordRecoveryKey: {
@@ -84,6 +81,30 @@ export default function initAuthentication(p = {}) {
                                 emailConfirmationKey: {
                                     type: String,
                                     wapplr: { disabled: true }
+                                },
+                                name: {
+                                    first: {
+                                        type: String,
+                                        wapplr: {
+                                            pattern: namePattern,
+                                            validationMessage: messages.validationName,
+                                            required: true,
+                                            formData: {
+                                                label: labels.firstName
+                                            }
+                                        }
+                                    },
+                                    last: {
+                                        type: String,
+                                        wapplr: {
+                                            pattern: namePattern,
+                                            validationMessage: messages.validationName,
+                                            private: "author",
+                                            formData: {
+                                                label: labels.lastName
+                                            }
+                                        }
+                                    }
                                 },
                                 ...(rest.config && rest.config.schemaFields) ? rest.config.schemaFields : {}
                             },
@@ -145,6 +166,8 @@ export default function initAuthentication(p = {}) {
             },
         })
 
+        addStatesHandle({wapp});
+
         Object.defineProperty(server, "authentications", {
             ...defaultDescriptor,
             writable: false,
@@ -152,8 +175,6 @@ export default function initAuthentication(p = {}) {
         });
 
         Object.defineProperty(server.authentications, "wapp", {...defaultDescriptor, writable: false, enumerable: false, value: wapp});
-
-        addStatesHandle({wapp})
 
     }
 

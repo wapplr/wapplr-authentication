@@ -1,5 +1,5 @@
 import {defaultDescriptor} from "../common/utils";
-import addStatesHandle from "../common/addStatesHandle";
+import addStatesHandle from "./addStatesHandle";
 
 export default function initAuthentication(p = {}) {
 
@@ -52,12 +52,13 @@ export default function initAuthentication(p = {}) {
 
                                                 if (type === "INS_RES" && payload.name === "responses"){
 
-                                                    const keys = [name+"Login", name+"Logout", name+"Signup"];
+                                                    const keys = [name+"Login", name+"Logout", name+"Signup", name+"ResetPassword", name+"Save", name+"ChangeEmail"];
                                                     const stateBeforeUserId = state.req.user?._id;
+                                                    const stateBeforeUser = state.req.user;
                                                     const response = payload.value;
 
                                                     keys.forEach(function (requestName) {
-                                                        if (response && response[requestName] && typeof response[requestName].record !== "undefined"){
+                                                        if (response && response[requestName] && typeof response[requestName].record !== "undefined" && !response[requestName].error){
 
                                                             const isLogout = (requestName === name+"Logout");
 
@@ -66,9 +67,13 @@ export default function initAuthentication(p = {}) {
                                                                 userId = null;
                                                             }
 
-                                                            const changed = !((userId && stateBeforeUserId && stateBeforeUserId.toString() === userId.toString()) || (!userId && !stateBeforeUserId));
+                                                            const changedUser = !(
+                                                                (userId && stateBeforeUserId && stateBeforeUserId.toString() === userId.toString()) ||
+                                                                (!userId && !stateBeforeUserId));
 
-                                                            if (changed) {
+                                                            const changedData = (userId && !changedUser && JSON.stringify(stateBeforeUser) !== JSON.stringify(response[requestName].record));
+
+                                                            if (changedUser || changedData) {
 
                                                                 const newUser = (response[requestName].record?._id && !isLogout) ? {...response[requestName].record} : null;
 

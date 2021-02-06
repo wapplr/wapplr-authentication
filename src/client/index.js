@@ -1,5 +1,5 @@
 import wapplrClient from "wapplr";
-import initAuthentication from "./initAuthentication"; 
+import initAuthentication from "./initAuthentication";
 
 export default function createClient(p) {
     const wapp = p.wapp || wapplrClient({...p});
