@@ -2,6 +2,7 @@ import session from "express-session";
 import connectMongo from "connect-mongo";
 import cookieSignature from "cookie-signature";
 import {defaultDescriptor} from "./utils";
+import cookie from "cookie";
 
 function getDefaultSessionMiddleware(p = {}) {
 
@@ -150,7 +151,7 @@ export default function createSessionManager(p = {}) {
                     return req.session.destroy(function(err) {
                         req.user = null;
                         req.wappRequest.user = null;
-                        res.clearCookie(sessionManager.cookieName);
+                        res.setHeader("Set-Cookie", cookie.serialize(sessionManager.cookieName, String(""), { expires: new Date(1), path: "/" }));
                         if (err) {
                             return reject(err);
                         }
