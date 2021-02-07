@@ -1,4 +1,4 @@
-# Wapplr-react
+# Wapplr-authentication
 
 This package is an authentication service for [Wapplr](https://github.com/wapplr/wapplr).
 
@@ -165,7 +165,7 @@ const user = await wapp.server.authentications.getAuthentication({
                     extendResolver: "findMany",
                     args: null,
                     resolve: async function({input}) {
-                        return await Model.find().sort({score: -1, time: 1});
+                        return await Model.find();
                     }
                 }
             },
