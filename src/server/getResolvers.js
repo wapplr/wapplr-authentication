@@ -2,7 +2,7 @@ import bcrypt from "bcrypt";
 import mongoose from "mongoose";
 import {getHelpersForResolvers} from "wapplr-posttypes/dist/server/getResolvers.js";
 
-import defaultMessages from "./defaultMessages";
+import defaultMessages, {defaultLabels} from "./defaultMessages";
 import getSession from "./getSession";
 import getCrypto from "./crypto";
 
@@ -14,6 +14,7 @@ export default function getResolvers(p = {}) {
 
     const {
         messages = defaultMessages,
+        labels = defaultLabels,
         mailer = {
             send: async function (type, data, input) {
                 console.log("[WAPPLR-AUTHENTICATION] No email module installed", type);
@@ -50,7 +51,7 @@ export default function getResolvers(p = {}) {
             },
             resolve: async function ({input}){
 
-                const {args, editor, req, res, allRequiredFieldsAreProvided, missingFields, allFieldsAreValid, invalidFields, mergedErrorFields} = input;
+                const {args, editor, req, res, allRequiredFieldsAreProvided, allFieldsAreValid, mergedErrorFields} = input;
                 const {password, email, record} = args;
 
                 if (editor){
@@ -235,7 +236,7 @@ export default function getResolvers(p = {}) {
             },
             resolve: async function ({input}) {
                 try {
-                    const {post, args, req, res, editorIsAuthor, editor} = input;
+                    const {post, editorIsAuthor, editor} = input;
                     const user = post;
 
                     if ((user && editorIsAuthor) || (user && !editor)) {
@@ -260,6 +261,131 @@ export default function getResolvers(p = {}) {
                             },
                         }
                     }
+                } catch (e) {
+                    return {
+                        error: {message: e.message || messages.signFail},
+                    }
+                }
+            },
+        },
+        changePassword: {
+            extendResolver: "updateById",
+            args: {
+                _id: "MongoID!",
+                password: "String!",
+                newPassword: "String!",
+            },
+            wapplr: {
+                newPassword: {
+                    wapplr: {
+                        pattern: Model.getJsonSchema({doNotDeleteDisabledFields: true}).properties.password?.wapplr?.pattern,
+                        validationMessage: messages.validationPassword,
+                        formData: {
+                            label: labels.newPassword,
+                            type: "password"
+                        }
+                    }
+                },
+            },
+            resolve: async function ({input, resolverProperties}) {
+                try {
+                    const {post, args, editorIsAuthor} = input;
+
+                    const {password, newPassword} = args;
+
+                    if (!post){
+                        return {
+                            error: {message: messages.postNotFound},
+                        }
+                    }
+
+                    if (!editorIsAuthor){
+                        return {
+                            error: {message: messages.accessDenied},
+                        }
+                    }
+
+                    let invalidPassword = false;
+                    let validationMessageForPassword = messages.invalidPassword;
+                    const missingPassword = (!password || typeof password !== "string");
+
+                    if (!missingPassword) {
+                        try {
+                            const jsonSchema = Model.getJsonSchema({doNotDeleteDisabledFields: true});
+                            const pattern = jsonSchema.properties.password?.wapplr?.pattern;
+                            if (pattern && !password.match(pattern)) {
+                                validationMessageForPassword = jsonSchema.properties.password?.wapplr?.validationMessage;
+                                invalidPassword = true;
+                            }
+                        } catch (e) {}
+                    }
+
+                    let invalidNewPassword = false;
+                    let validationMessageForNewPassword = messages.invalidNewPassword;
+                    const missingNewPassword = (!newPassword || typeof newPassword !== "string");
+
+                    if (!missingNewPassword) {
+                        try {
+                            const pattern = resolverProperties?.wapplr?.newPassword?.wapplr?.pattern;
+                            if (pattern && !newPassword.match(pattern)) {
+                                validationMessageForNewPassword = resolverProperties?.wapplr?.newPassword?.wapplr?.validationMessage;
+                                invalidNewPassword = true;
+                            }
+                        } catch (e) {}
+                    }
+
+                    if (missingPassword || invalidPassword || missingNewPassword || invalidNewPassword){
+                        return {
+                            error: {
+                                message: (missingPassword || missingNewPassword) ? messages.missingData : messages.invalidData,
+                                errors: [
+
+                                    ...(missingPassword) ? [{path: "password", message: messages.missingPassword}] : [],
+                                    ...(!missingPassword && invalidPassword) ? [{path: "password", message: validationMessageForPassword}] : [],
+
+                                    ...(missingNewPassword) ? [{path: "newPassword", message: messages.missingData}] : [],
+                                    ...(!missingNewPassword && invalidNewPassword) ? [{path: "newPassword", message: validationMessageForNewPassword}] : []
+                                ]
+                            },
+                        }
+                    }
+
+                    try {
+
+                        const user = post;
+
+                        const isMatch = await bcrypt.compare(args.password, user.password);
+                        if (isMatch) {
+
+                            const salt = await bcrypt.genSalt(10);
+                            user.password = await bcrypt.hash(newPassword, salt);
+
+                            if (isDeleted(user)) {
+                                setRestoreStatusByAuthor(user);
+                            }
+
+                            const savedUser = await user.save();
+
+                            return {
+                                record: savedUser,
+                            }
+
+                        } else {
+                            return {
+                                error: {
+                                    message: messages.incorrectPassword,
+                                    errors: [{path: "password"}]
+                                },
+                            }
+                        }
+
+                    } catch (e){
+                        return {
+                            error: {message: e.message || messages.savePostDefaultFail},
+                        }
+                    }
+
+
                 } catch (e) {
                     return {
                         error: {message: e.message || messages.signFail},
@@ -383,7 +509,7 @@ export default function getResolvers(p = {}) {
             },
             resolve: async function ({input}) {
                 try {
-                    const {post, args, req, res, editorIsAuthor} = input;
+                    const {post, args, editorIsAuthor} = input;
 
                     const {email, password} = args;
 

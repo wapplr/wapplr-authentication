@@ -156,7 +156,8 @@ const user = await wapp.server.authentications.getAuthentication({
             firstName: "First name",
             lastName: "Last name",
             email: "Email",
-            password: "Password"
+            password: "Password",
+            newPassword: "New password"
         },
 
         resolvers: {
