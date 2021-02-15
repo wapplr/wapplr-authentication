@@ -58,7 +58,7 @@ export async function createAnAdmin({Model, statusManager, admin = {}}) {
                     _createdDate: new Date(),
                     name,
                     email,
-                    emailValidated: true,
+                    emailConfirmed: true,
                     password: hashedPassword,
                 }
 

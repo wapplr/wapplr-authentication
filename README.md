@@ -62,7 +62,7 @@ const user = await wapp.server.authentications.getAuthentication({
                     required: true
                 }
             },
-            emailValidated: {
+            emailConfirmed: {
                 type: Boolean,
                 default: false,
                 wapplr: {
@@ -102,7 +102,7 @@ const user = await wapp.server.authentications.getAuthentication({
                 first: { type: String }
             },
             email: { type: String },
-            emailValidated: { type: Boolean },
+            emailConfirmed: { type: Boolean, value: true },
         },
 
         admin: {
@@ -144,6 +144,10 @@ const user = await wapp.server.authentications.getAuthentication({
             missingPasswordRecoveryKey: "Missing password recovery key",
             incorrectPasswordRecoveryKey: "Incorrect password recovery key",
 
+            missingEmailConfirmationKey: "Missing email confirmation key",
+            incorrectEmailConfirmationKey: "Incorrect email confirmation key",
+            alreadyConfirmedEmail: "Your email address has already been confirmed",
+
             alreadyLoggedIn: "You are already logged in to this session",
             thereWasNoUser: "there was no user in the session",
 
@@ -157,7 +161,8 @@ const user = await wapp.server.authentications.getAuthentication({
             lastName: "Last name",
             email: "Email",
             password: "Password",
-            newPassword: "New password"
+            newPassword: "New password",
+            emailConfirmationKey: "Email confirmation key"
         },
 
         resolvers: {

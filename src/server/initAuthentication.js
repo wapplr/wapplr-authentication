@@ -54,7 +54,7 @@ export default function initAuthentication(p = {}) {
                                         }
                                     }
                                 },
-                                emailValidated: {
+                                emailConfirmed: {
                                     type: Boolean,
                                     default: false,
                                     wapplr: {
@@ -114,7 +114,7 @@ export default function initAuthentication(p = {}) {
                                     first: { type: String },
                                 },
                                 email: { type: String },
-                                emailValidated: { type: Boolean },
+                                emailConfirmed: { type: Boolean, value: true },
                                 ...(rest.config && rest.config.requiredDataForStatus) ? rest.config.requiredDataForStatus : {}
                             },
 

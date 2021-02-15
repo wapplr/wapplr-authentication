@@ -28,6 +28,10 @@ const defaultMessages = {
     missingPasswordRecoveryKey: "Missing password recovery key",
     incorrectPasswordRecoveryKey: "Incorrect password recovery key",
 
+    missingEmailConfirmationKey: "Missing email confirmation key",
+    incorrectEmailConfirmationKey: "Incorrect email confirmation key",
+    alreadyConfirmedEmail: "Your email address has already been confirmed",
+
     alreadyLoggedIn: "You are already logged in to this session",
     thereWasNoUser: "there was no user in the session",
 
@@ -41,7 +45,9 @@ export const defaultLabels = {
     firstName: "First name",
     lastName: "Last name",
     email: "Email",
-    password: "Password"
+    password: "Password",
+    newPassword: "New password",
+    emailConfirmationKey: "Email confirmation key"
 }
 
 export default defaultMessages;

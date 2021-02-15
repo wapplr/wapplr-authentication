@@ -52,7 +52,7 @@ export default function initAuthentication(p = {}) {
 
                                                 if (type === "INS_RES" && payload.name === "responses"){
 
-                                                    const keys = [name+"Login", name+"Logout", name+"Signup", name+"ResetPassword", name+"Save", name+"ChangeEmail"];
+                                                    const keys = [name+"Login", name+"Logout", name+"Signup", name+"ResetPassword", name+"Save", name+"ChangeEmail", name + "EmailConfirmation"];
                                                     const stateBeforeUserId = state.req.user?._id;
                                                     const stateBeforeUser = state.req.user;
                                                     const response = payload.value;
