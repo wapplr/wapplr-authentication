@@ -5,16 +5,13 @@ import {defaultDescriptor} from "./utils";
 
 export default function getSession(p = {}) {
 
-    const {wapp, database} = p;
+    const {wapp, database, config = {}} = p;
 
     const globals = wapp.globals;
     const {DEV} = globals;
 
     const server = wapp.server;
     const {app} = server;
-
-    const globalConfig = (server.config && server.config.session) ? server.config.session : {};
-    const config = (p.config) ? {...globalConfig, ...p.config} : {...globalConfig};
 
     const {
         cookieSecret = "yourHash",
@@ -27,7 +24,9 @@ export default function getSession(p = {}) {
                 return null;
             }
             let user;
-            try {user = await Model.findOne({"_id": _id}).exec();} catch (e) {}
+            try {
+                user = await Model.findOne({"_id": _id}).exec();
+            } catch (e) {}
             if (!user) {
                 return null;
             }

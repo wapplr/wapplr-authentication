@@ -23,12 +23,9 @@ export default function getResolvers(p = {}) {
         }
     } = config;
 
-    const globalConfig = (wapp.server.config && wapp.server.config.session) ? wapp.server.config.session : {};
-    const sessionConfig = (p.config) ? {...globalConfig, ...p.config} : {...globalConfig};
-
     const {
         cookieSecret = "yourHash",
-    } = sessionConfig;
+    } = config;
 
     const session = getSession(p);
 
