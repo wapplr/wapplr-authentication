@@ -52,7 +52,7 @@ export default function initAuthentication(p = {}) {
 
                                                 if (type === "INS_RES" && payload.name === "responses"){
 
-                                                    const keys = [name+"Login", name+"Logout", name+"Signup", name+"ResetPassword", name+"Save", name+"ChangeEmail", name + "EmailConfirmation"];
+                                                    const keys = [name+"Login", name+"Logout", name+"Signup", name+"ResetPassword", name+"Save", name+"ChangeEmail", name + "EmailConfirmation", name+"Delete"];
                                                     const stateBeforeUserId = state.req.user?._id;
                                                     const stateBeforeUser = state.req.user;
                                                     const response = payload.value;
@@ -67,11 +67,16 @@ export default function initAuthentication(p = {}) {
                                                                 userId = null;
                                                             }
 
-                                                            const changedUser = !(
+                                                            let changedUser = !(
                                                                 (userId && stateBeforeUserId && stateBeforeUserId.toString() === userId.toString()) ||
                                                                 (!userId && !stateBeforeUserId));
 
                                                             const changedData = (userId && !changedUser && JSON.stringify(stateBeforeUser) !== JSON.stringify(response[requestName].record));
+
+                                                            const possibleRequestsByAdmin = [name+"Save", name+"Delete"]
+                                                            if (changedUser && stateBeforeUserId && userId && possibleRequestsByAdmin.indexOf(requestName) > -1) {
+                                                                changedUser = false;
+                                                            }
 
                                                             if (changedUser || changedData) {
 
