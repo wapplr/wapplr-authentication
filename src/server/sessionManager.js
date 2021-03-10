@@ -160,9 +160,9 @@ export default function createSessionManager(p = {}) {
                 });
             }
         },
-    }
+    };
 
-    const sessionManager = Object.create(Object.prototype, properties)
+    const sessionManager = Object.create(Object.prototype, properties);
     return sessionManager;
 
 }

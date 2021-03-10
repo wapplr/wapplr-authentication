@@ -44,7 +44,7 @@ export default function getSession(p = {}) {
         cookieName,
         getUser,
         mongooseConnection: database.connection
-    })
+    });
 
     if (!server.session) {
 

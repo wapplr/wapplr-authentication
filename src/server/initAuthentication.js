@@ -108,7 +108,53 @@ export default function initAuthentication(p = {}) {
                                 },
                                 ...(rest.config && rest.config.schemaFields) ? rest.config.schemaFields : {}
                             },
+                            setSchemaMiddleware: function (p) {
+                                const {schema, statusManager} = p;
+                                schema.pre("save", async function(next) {
+                                    const userId = this._id;
+                                    const status = this[statusManager.statusField];
+                                    const waitForSave = [];
+                                    if (this.isModified(statusManager.statusField)){
+                                        const dbs = wapp.server.database;
+                                        await Promise.all(Object.keys(dbs).map(async function (key) {
+                                            const db = dbs[key];
+                                            const models = db.models;
+                                            return await Promise.all(Object.keys(models).map(async function (modelName) {
+                                                const model = models[modelName];
+                                                const posts = await model.find({_author: userId});
+                                                waitForSave.push(...posts);
+                                            }))
+                                        }))
+                                    }
 
+                                    if (waitForSave.length){
+                                        let i = -1;
+                                        async function nextSave() {
+                                            i = i + 1;
+                                            if (waitForSave[i]){
+                                                const post = waitForSave[i];
+                                                if (post._id.toString() === userId.toString()){
+                                                    return await nextSave();
+                                                }
+                                                post["_author"+statusManager.statusField] = status;
+                                                await post.save();
+                                                await nextSave();
+                                            } else {
+                                                await next();
+                                            }
+                                        }
+
+                                        await nextSave();
+
+                                    } else {
+                                        await next();
+                                    }
+                                });
+
+                                if (rest.config.setSchemaMiddleware) {
+                                    rest.config.setSchemaMiddleware(p);
+                                }
+                            },
                             requiredDataForStatus: {
                                 name: {
                                     first: { type: String },
@@ -124,7 +170,7 @@ export default function initAuthentication(p = {}) {
                             },
 
                         },
-                    })
+                    });
 
                     getResolvers({wapp, name, ...rest, ...postType});
 
@@ -133,9 +179,9 @@ export default function initAuthentication(p = {}) {
                             ...defaultDescriptor,
                             value: getSession({wapp, name, ...rest, ...postType})
                         },
-                    })
+                    });
 
-                    mergeProperties(defaultAuthenticationObject, postType)
+                    mergeProperties(defaultAuthenticationObject, postType);
 
                     Object.defineProperty(server.authentications, name, {
                         ...defaultDescriptor,
@@ -164,7 +210,7 @@ export default function initAuthentication(p = {}) {
                     return await server.authentications.addAuthentication({name, ...rest});
                 }
             },
-        })
+        });
 
         addStatesHandle({wapp});
 

@@ -1,21 +1,9 @@
 import mongoose from "mongoose";
 import bcrypt from "bcrypt";
-import {defaultDescriptor as commonDefaultDescriptor} from "../common/utils";
+import {defaultDescriptor as commonDefaultDescriptor, mergeProperties as commonMergeProperties} from "../common/utils";
 
 export const defaultDescriptor = commonDefaultDescriptor;
-
-export function mergeProperties(dest, src) {
-    Object.getOwnPropertyNames(src).forEach(function forEachOwnPropertyName (name) {
-        if (Object.hasOwnProperty.call(dest, name)) {
-            return
-        }
-        const descriptor = Object.getOwnPropertyDescriptor(src, name);
-        Object.defineProperty(dest, name, descriptor)
-    });
-    return dest
-}
-
-
+export const mergeProperties = commonMergeProperties;
 
 export async function createAnAdmin({Model, statusManager, admin = {}}) {
     try {
@@ -37,7 +25,7 @@ export async function createAnAdmin({Model, statusManager, admin = {}}) {
                 if (!statusManager.isFeatured(userExists)) {
 
                     userExists[statusManager.statusField] = statusManager.getFeaturedStatus();
-                    const upgradedUser = await userExists.save()
+                    const upgradedUser = await userExists.save();
                     if (upgradedUser) {
                         console.log("[WAPPLR-AUTHENTICATION]", "Your account with this email [" + email + "] was upgraded to admin")
                     }
@@ -60,9 +48,9 @@ export async function createAnAdmin({Model, statusManager, admin = {}}) {
                     email,
                     emailConfirmed: true,
                     password: hashedPassword,
-                }
+                };
 
-                const newUser = new Model(newUserData)
+                const newUser = new Model(newUserData);
                 const savedAdmin = await newUser.save();
                 if (savedAdmin && savedAdmin._id) {
                     console.log("[WAPPLR-AUTHENTICATION]", "Your admin account created with this data:", {...newUserData, password})

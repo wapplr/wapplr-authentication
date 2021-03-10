@@ -1,4 +1,4 @@
-import {defaultDescriptor} from "../common/utils";
+import {defaultDescriptor, mergeProperties} from "../common/utils";
 import addStatesHandle from "./addStatesHandle";
 
 export default function initAuthentication(p = {}) {
@@ -17,7 +17,7 @@ export default function initAuthentication(p = {}) {
             lastRequest = req.wappRequest;
             next()
         }
-    })
+    });
 
     if (!client.authentications) {
 
@@ -28,12 +28,28 @@ export default function initAuthentication(p = {}) {
                 enumerable: false,
                 value: function addAuthentication(p = {}) {
 
-                    const {name = "user"} = p;
+                    const {name = "user", ...rest} = p;
+
+                    const postType = wapp.client.postTypes.getPostType({
+                        ...rest,
+                        name: name,
+                        addIfThereIsNot: true,
+                        config: {
+                            requiredDataForStatus: {
+                                name: {
+                                    first: { type: String },
+                                },
+                                email: { type: String },
+                                emailConfirmed: { type: Boolean, value: true },
+                                ...(rest.config && rest.config.requiredDataForStatus) ? rest.config.requiredDataForStatus : {}
+                            },
+                        }
+                    });
 
                     const defaultAuthenticationObject = Object.create(Object.prototype, {
-                        subscribeToUserResponsesForUpdateUser: {
+                        subscribeUpdateUser: {
                             ...defaultDescriptor,
-                            value: function subscribeToUserResponsesForUpdateUser() {
+                            value: function subscribeUpdateUser() {
 
                                 if (wapp.states) {
                                     const statesHandleName = "subscribeFor" + name.slice(0, 1).toUpperCase() + name.slice(1);
@@ -44,8 +60,8 @@ export default function initAuthentication(p = {}) {
                                             const wappResponse = res.wappResponse;
                                             const wappRequest = req.wappRequest;
 
-                                            if (client.authentications[name].unsubscribe){
-                                                client.authentications[name].unsubscribe();
+                                            if (client.authentications[name].unsubscribeUpdateUser){
+                                                client.authentications[name].unsubscribeUpdateUser();
                                             }
 
                                             const unsubscribe = wappResponse.store.subscribe(function (state, {type, payload}) {
@@ -56,6 +72,7 @@ export default function initAuthentication(p = {}) {
                                                     const stateBeforeUserId = state.req.user?._id;
                                                     const stateBeforeUser = state.req.user;
                                                     const response = payload.value;
+                                                    const findByIdBeforeUpdate = state.res.responses && state.res.responses[name+"FindById"];
 
                                                     keys.forEach(function (requestName) {
                                                         if (response && response[requestName] && typeof response[requestName].record !== "undefined" && !response[requestName].error){
@@ -63,6 +80,7 @@ export default function initAuthentication(p = {}) {
                                                             const isLogout = (requestName === name+"Logout");
 
                                                             let userId = response[requestName].record?._id;
+                                                            const shouldUpdateFindById = (findByIdBeforeUpdate?._id === userId);
                                                             if (isLogout && userId) {
                                                                 userId = null;
                                                             }
@@ -73,7 +91,7 @@ export default function initAuthentication(p = {}) {
 
                                                             const changedData = (userId && !changedUser && JSON.stringify(stateBeforeUser) !== JSON.stringify(response[requestName].record));
 
-                                                            const possibleRequestsByAdmin = [name+"Save", name+"Delete"]
+                                                            const possibleRequestsByAdmin = [name+"Save", name+"Delete"];
                                                             if (changedUser && stateBeforeUserId && userId && possibleRequestsByAdmin.indexOf(requestName) > -1) {
                                                                 changedUser = false;
                                                             }
@@ -85,7 +103,16 @@ export default function initAuthentication(p = {}) {
                                                                 wappResponse.store.dispatch(wapp.states.runAction("req", {
                                                                     name: "user",
                                                                     value: newUser
-                                                                }))
+                                                                }));
+
+                                                                if (shouldUpdateFindById){
+                                                                    wappResponse.store.dispatch(wapp.states.stateManager.actions.res({
+                                                                        type: "INS_RES",
+                                                                        name: "responses",
+                                                                        value: {[name+"FindById"]: newUser}
+                                                                    }));
+                                                                }
+
                                                                 wappResponse.state = wappResponse.store.getState();
 
                                                                 wappRequest.user = newUser;
@@ -96,12 +123,12 @@ export default function initAuthentication(p = {}) {
                                                         }
                                                     })
                                                 }
-                                            })
+                                            });
 
-                                            client.authentications[name].unsubscribe = function() {
+                                            client.authentications[name].unsubscribeUpdateUser = function() {
                                                 unsubscribe();
-                                                client.authentications[name].unsubscribe = null;
-                                            }
+                                                client.authentications[name].unsubscribeUpdateUser = null;
+                                            };
 
                                             next();
 
@@ -110,11 +137,13 @@ export default function initAuthentication(p = {}) {
                                 }
                             }
                         },
-                        unsubscribe: {
+                        unsubscribeUpdateUser: {
                             ...defaultDescriptor,
                             value: null
                         },
-                    })
+                    });
+
+                    mergeProperties(defaultAuthenticationObject, postType);
 
                     Object.defineProperty(client.authentications, name, {
                         ...defaultDescriptor,
@@ -122,7 +151,7 @@ export default function initAuthentication(p = {}) {
                         value: defaultAuthenticationObject
                     });
 
-                    client.authentications[name].subscribeToUserResponsesForUpdateUser();
+                    client.authentications[name].subscribeUpdateUser();
 
                     return client.authentications[name];
 
@@ -141,7 +170,7 @@ export default function initAuthentication(p = {}) {
                     return client.authentications.addAuthentication({name, ...rest});
                 }
             },
-        })
+        });
 
         Object.defineProperty(client, "authentications", {
             ...defaultDescriptor,

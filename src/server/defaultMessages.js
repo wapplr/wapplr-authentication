@@ -48,6 +48,6 @@ export const defaultLabels = {
     password: "Password",
     newPassword: "New password",
     emailConfirmationKey: "Email confirmation key"
-}
+};
 
 export default defaultMessages;

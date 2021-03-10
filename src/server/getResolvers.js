@@ -220,7 +220,7 @@ export default function getResolvers(p = {}) {
                 }
                 if (user && user._id){
                     await session.endAuthedSession(req, res);
-                    await session.populateItemMiddleware(req, res)
+                    await session.populateItemMiddleware(req, res);
                     return {
                         record: user,
                     };
@@ -307,20 +307,7 @@ export default function getResolvers(p = {}) {
                         }
                     }
 
-                    let invalidPassword = false;
-                    let validationMessageForPassword = messages.invalidPassword;
                     const missingPassword = (!password || typeof password !== "string");
-
-                    if (!missingPassword) {
-                        try {
-                            const jsonSchema = Model.getJsonSchema({doNotDeleteDisabledFields: true});
-                            const pattern = jsonSchema.properties.password?.wapplr?.pattern;
-                            if (pattern && !password.match(pattern)) {
-                                validationMessageForPassword = jsonSchema.properties.password?.wapplr?.validationMessage;
-                                invalidPassword = true;
-                            }
-                        } catch (e) {}
-                    }
 
                     let invalidNewPassword = false;
                     let validationMessageForNewPassword = messages.invalidNewPassword;
@@ -336,15 +323,12 @@ export default function getResolvers(p = {}) {
                         } catch (e) {}
                     }
 
-                    if (missingPassword || invalidPassword || missingNewPassword || invalidNewPassword){
+                    if (missingPassword || missingNewPassword || invalidNewPassword){
                         return {
                             error: {
                                 message: (missingPassword || missingNewPassword) ? messages.missingData : messages.invalidData,
                                 errors: [
-
                                     ...(missingPassword) ? [{path: "password", message: messages.missingPassword}] : [],
-                                    ...(!missingPassword && invalidPassword) ? [{path: "password", message: validationMessageForPassword}] : [],
-
                                     ...(missingNewPassword) ? [{path: "newPassword", message: messages.missingData}] : [],
                                     ...(!missingNewPassword && invalidNewPassword) ? [{path: "newPassword", message: validationMessageForNewPassword}] : []
                                 ]
@@ -795,7 +779,7 @@ export default function getResolvers(p = {}) {
             },
         },
         ...(config.resolvers) ? config.resolvers : {}
-    }
+    };
 
     const {createResolvers} = getHelpersForResolvers({wapp, Model, statusManager});
 

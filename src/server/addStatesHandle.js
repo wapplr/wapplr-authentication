@@ -17,16 +17,21 @@ export default function addStatesHandle(p = {}) {
 
                     const modelName = req.session.modelName;
                     const postType = await wapp.server.postTypes.getPostType({name: modelName.toLowerCase()});
-                    const {filterOutputRecord} = getHelpersForResolvers({wapp, ...postType})
+                    const {filterOutputRecord} = getHelpersForResolvers({wapp, ...postType});
+
+                    const user = req.wappRequest.user;
+                    const isAdmin = (user) ? postType.statusManager.isFeatured(user) : false;
+                    const isAuthor = true;
+                    const isNotDeleted = (user) ? postType.statusManager.isNotDeleted(user) : true;
 
                     res.wappResponse.store.dispatch(
                         wapp.states.runAction(
                             "req", {
                                 name: "user",
-                                value: (req.wappRequest.user) ? filterOutputRecord(req.wappRequest.user, false, true) : null
+                                value: (req.wappRequest.user) ? filterOutputRecord(req.wappRequest.user, isAdmin, isAuthor, isNotDeleted) : null
                             }
                         )
-                    )
+                    );
                     res.wappResponse.state = res.wappResponse.store.getState();
                 }
 
