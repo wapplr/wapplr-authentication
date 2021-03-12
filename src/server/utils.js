@@ -41,7 +41,8 @@ export async function createAnAdmin({Model, statusManager, admin = {}}) {
 
                 const newUserData = {
                     _id: _id,
-                    _status: statusManager.getFeaturedStatus(),
+                    [statusManager.statusField]: statusManager.getFeaturedStatus(),
+                    [statusManager.authorStatusField]: statusManager.getFeaturedStatus(),
                     _author: _id,
                     _createdDate: new Date(),
                     name,

@@ -136,7 +136,7 @@ export default function initAuthentication(p = {}) {
                                                 if (post._id.toString() === userId.toString()){
                                                     return await nextSave();
                                                 }
-                                                post["_author"+statusManager.statusField] = status;
+                                                post[statusManager.authorStatusField] = status;
                                                 await post.save();
                                                 await nextSave();
                                             } else {
