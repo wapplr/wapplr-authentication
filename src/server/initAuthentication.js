@@ -169,6 +169,7 @@ export default function initAuthentication(p = {}) {
                                 ...(rest.config && rest.config.postTypeResolvers) ? rest.config.postTypeResolvers : {}
                             },
 
+                            beforeCreateResolvers: rest.config?.postTypeBeforeCreateResolvers,
                         },
                     });
 

@@ -20,7 +20,9 @@ export default function getResolvers(p = {}) {
                 console.log("[WAPPLR-AUTHENTICATION] No email module installed", type);
                 return new Promise(function (resolve) {return resolve();})
             }
-        }
+        },
+        beforeCreateResolvers,
+        ...rest
     } = config;
 
     const {
@@ -780,6 +782,10 @@ export default function getResolvers(p = {}) {
         },
         ...(config.resolvers) ? config.resolvers : {}
     };
+
+    if (beforeCreateResolvers){
+        beforeCreateResolvers(resolvers, {...p, config: {...rest, messages, labels, mailer}});
+    }
 
     const {createResolvers} = getHelpersForResolvers({wapp, Model, statusManager});
 
