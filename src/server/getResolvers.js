@@ -248,7 +248,7 @@ export default function getResolvers(p = {}) {
                         user.passwordRecoveryKey = crypto.encrypt(JSON.stringify({time: Date.now(), _id: user._id}));
                         const savedUser = await user.save();
 
-                        await mailer.send("forgotPassword", savedUser, input);
+                        await mailer.send("resetPassword", savedUser, input);
 
                         return {
                             record: {
