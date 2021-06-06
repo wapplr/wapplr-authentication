@@ -29,6 +29,14 @@ function getDefaultSessionMiddleware(p = {}) {
     const expressSessionMiddleware = session(sessionOptions);
 
     return async function sessionMiddleware(req, res, next){
+        if (!res._implicitHeader){
+            res._implicitHeader = function () {
+                console.log("[WAPPLR-AUTHENTICATION]", "http2 fix for express-session _implicitHeader");
+                if (!res._header && !res.headersSent) {
+                    res.writeHead(res.statusCode)
+                }
+            }
+        }
         expressSessionMiddleware(req, res, async function () {
             await next();
         })
