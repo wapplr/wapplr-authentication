@@ -18,7 +18,7 @@ const defaultMessages = {
     missingEmail: "Missing email",
     invalidEmail: "Invalid email",
     incorrectEmail: "Incorrect email",
-    usedEmail: "E-mail was already used",
+    usedEmail: "Email was already used",
     noChanges: "No changes",
 
     missingPassword: "Missing password",
