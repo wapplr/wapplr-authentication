@@ -787,7 +787,7 @@ export default function getResolvers(p = {}) {
         beforeCreateResolvers(resolvers, {...p, config: {...rest, messages, labels, mailer}});
     }
 
-    const {createResolvers} = getHelpersForResolvers({wapp, Model, statusManager});
+    const {createResolvers} = getHelpersForResolvers({wapp, Model, statusManager, messages});
 
     return wapp.server.graphql.addResolversToTC({resolvers: createResolvers(resolvers), TCName: Model.modelName})
 }
