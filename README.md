@@ -131,9 +131,9 @@ const user = await wapp.server.authentications.getAuthentication({
 
             signFail: "Sorry, there was an issue signing you in, please try again",
 
-            missingEmail: "Missing e-mail",
-            invalidEmail: "Invalid e-mail",
-            incorrectEmail: "Incorrect e-mail",
+            missingEmail: "Missing email",
+            invalidEmail: "Invalid email",
+            incorrectEmail: "Incorrect email",
             usedEmail: "E-mail was already used",
             noChanges: "No changes",
 
