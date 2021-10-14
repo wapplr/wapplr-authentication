@@ -1,10 +1,4 @@
 const defaultMessages = {
-    statusCreated: "registered",
-    statusDeleted: "deleted",
-    statusBanned: "banned",
-    statusRequiredData: "required data is not provided",
-    statusApproved: "approved",
-    statusFeatured: "admin",
 
     savePostDefaultFail: "Sorry, there was an issue save the entry, please try again",
     invalidData: "Invalid data",
