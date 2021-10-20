@@ -64,15 +64,15 @@ export default function initAuthentication(p = {}) {
                                                 client.authentications[name].unsubscribeUpdateUser();
                                             }
 
-                                            const unsubscribe = wappResponse.store.subscribe(function (state, {type, payload}) {
+                                            const unsubscribe = wappResponse.store.subscribe(function ({type, payload}) {
 
                                                 if (type === "INS_RES" && payload.name === "responses"){
 
                                                     const keys = [name+"Login", name+"Logout", name+"Signup", name+"ResetPassword", name+"Save", name+"ChangeEmail", name + "EmailConfirmation", name+"Delete"];
-                                                    const stateBeforeUserId = state.req.user?._id;
-                                                    const stateBeforeUser = state.req.user;
+                                                    const stateBeforeUserId = wappResponse.store.getState("req.user._id");
+                                                    const stateBeforeUser = wappResponse.store.getState("req.user");
                                                     const response = payload.value;
-                                                    const findByIdBeforeUpdate = state.res.responses && state.res.responses[name+"FindById"];
+                                                    const findByIdBeforeUpdate = wappResponse.store.getState("res.responses."+name+"FindById");
 
                                                     keys.forEach(function (requestName) {
                                                         if (response && response[requestName] && typeof response[requestName].record !== "undefined" && !response[requestName].error){
@@ -112,8 +112,6 @@ export default function initAuthentication(p = {}) {
                                                                         value: {[name+"FindById"]: newUser}
                                                                     }));
                                                                 }
-
-                                                                wappResponse.state = wappResponse.store.getState();
 
                                                                 wappRequest.user = newUser;
                                                                 req.user = wappRequest.user;

@@ -8,8 +8,7 @@ export default function addStatesHandle(p = {}) {
         wapp.states.addHandle({
             userToState: async function userToState(req, res, next) {
 
-                const stateBefore = res.wappResponse.store.getState();
-                const stateBeforeUserId = stateBefore.req.user?._id;
+                const stateBeforeUserId = res.wappResponse.store.getState("req.user._id");
                 const userId = req.wappRequest.user?._id;
                 const changed = !((userId && stateBeforeUserId && stateBeforeUserId.toString() === userId.toString()) || (!userId && !stateBeforeUserId));
 
@@ -32,7 +31,6 @@ export default function addStatesHandle(p = {}) {
                             }
                         )
                     );
-                    res.wappResponse.state = res.wappResponse.store.getState();
                 }
 
                 next();
