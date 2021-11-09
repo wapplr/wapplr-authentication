@@ -2,8 +2,9 @@ import wapplrPostTypes from "wapplr-posttypes";
 import getSession from "./getSession";
 import getResolvers from "./getResolvers";
 import {mergeProperties, defaultDescriptor, createAnAdmin} from "./utils";
-import defaultMessages, {defaultLabels} from "./defaultMessages";
 import addStatesHandle from "./addStatesHandle";
+import getConstants from "./getConstants";
+import {capitalize} from "../common/utils";
 
 export default function initAuthentication(p = {}) {
 
@@ -29,12 +30,15 @@ export default function initAuthentication(p = {}) {
                     const emailPattern = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
                     const passwordPattern = /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[a-zA-Z]).{8,256}$/;
 
-                    const messages = rest?.config?.messages || defaultMessages;
-                    const labels = rest?.config?.labels || defaultLabels;
+                    const defaultConstants = getConstants(p);
+
+                    const messages = rest?.config?.messages || defaultConstants.messages;
+                    const labels = rest?.config?.labels || defaultConstants.labels;
 
                     const postType = await wapp.server.postTypes.getPostType({
                         ...rest,
                         name: name,
+                        authorModelName: capitalize(name),
                         addIfThereIsNot: true,
                         config: {
                             ...(rest.config) ? rest.config : {},
@@ -112,17 +116,21 @@ export default function initAuthentication(p = {}) {
                                 const {schema, statusManager} = p;
                                 schema.pre("save", async function(next) {
                                     const userId = this._id;
-                                    const status = this[statusManager.statusField];
+                                    const status = this._status;
                                     const waitForSave = [];
-                                    if (this.isModified(statusManager.statusField)){
+                                    if (this.isModified("_status")){
+                                        this._author_status = status;
                                         const dbs = wapp.server.database;
+                                        const postTypes = wapp.server.postTypes?.postTypes || {};
                                         await Promise.all(Object.keys(dbs).map(async function (key) {
                                             const db = dbs[key];
                                             const models = db.models;
                                             return await Promise.all(Object.keys(models).map(async function (modelName) {
                                                 const model = models[modelName];
                                                 const posts = await model.find({_author: userId});
-                                                waitForSave.push(...posts);
+                                                const foundPostTypeName = Object.keys(postTypes).find((postTypeName)=>postTypes[postTypeName].Model === model);
+                                                const postStatusManager = foundPostTypeName ? postTypes[foundPostTypeName].statusManager : null;
+                                                waitForSave.push(...posts.map((post)=>{return {post, statusManager: postStatusManager || statusManager}}));
                                             }))
                                         }))
                                     }
@@ -132,11 +140,11 @@ export default function initAuthentication(p = {}) {
                                         async function nextSave() {
                                             i = i + 1;
                                             if (waitForSave[i]){
-                                                const post = waitForSave[i];
+                                                const {post, /*statusManager*/} = waitForSave[i];
                                                 if (post._id.toString() === userId.toString()){
                                                     return await nextSave();
                                                 }
-                                                post[statusManager.authorStatusField] = status;
+                                                post._author_status = status;
                                                 await post.save();
                                                 await nextSave();
                                             } else {

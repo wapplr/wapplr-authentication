@@ -25,7 +25,13 @@ export default function getSession(p = {}) {
             }
             let user;
             try {
-                user = await Model.findOne({"_id": _id}).exec();
+                const populateProperties = (config.schemaFields) ? Object.keys(config.schemaFields).filter((key)=>config.schemaFields[key].ref).map((key)=>key) : [];
+                user = Model.findOne({"_id": _id});
+                populateProperties.forEach((key)=>{
+                    user = user.populate(key);
+                });
+                user = await user;
+
             } catch (e) {}
             if (!user) {
                 return null;

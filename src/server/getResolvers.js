@@ -2,21 +2,26 @@ import bcrypt from "bcrypt";
 import mongoose from "mongoose";
 import {getHelpersForResolvers} from "wapplr-posttypes/dist/server/getResolvers.js";
 
-import defaultMessages, {defaultLabels} from "./defaultMessages";
+import {capitalize} from "../common/utils";
+import getConstants from "./getConstants";
 import getSession from "./getSession";
 import getCrypto from "./crypto";
 
 export default function getResolvers(p = {}) {
 
-    const {wapp, Model, statusManager} = p;
+    const {wapp, Model, statusManager, name = "user"} = p;
 
     const config = (p.config) ? {...p.config} : {};
 
+    const n = name;
+    const N = capitalize(n);
+    const defaultConstants = getConstants(p);
+
     const {
-        messages = defaultMessages,
-        labels = defaultLabels,
+        messages = defaultConstants.messages,
+        labels = defaultConstants.labels,
         mailer = {
-            send: async function (type, data, input) {
+            send: async function (type) {
                 console.log("[WAPPLR-AUTHENTICATION] No email module installed", type);
                 return new Promise(function (resolve) {return resolve();})
             }
@@ -37,7 +42,7 @@ export default function getResolvers(p = {}) {
     const resolvers = {
         signup: {
             extendResolver: "createOne",
-            args: function (TC, schemaComposer) {
+            args: function (TC) {
 
                 const defaultResolver = TC.getResolver("createOne");
                 const defaultRecord = defaultResolver.args.record;
@@ -149,7 +154,7 @@ export default function getResolvers(p = {}) {
 
                 } catch (e){
                     return {
-                        error: {message: e.message || messages.savePostDefaultFail},
+                        error: {message: e.message || messages["save"+N+"DefaultFail"]},
                     }
                 }
 
@@ -214,7 +219,7 @@ export default function getResolvers(p = {}) {
         logout: {
             extendResolver: "updateById",
             args: null,
-            resolve: async function ({input, context}) {
+            resolve: async function ({input}) {
                 const {editor, req, res} = input;
                 let user;
                 if (editor){
@@ -299,7 +304,7 @@ export default function getResolvers(p = {}) {
 
                     if (!post){
                         return {
-                            error: {message: messages.postNotFound},
+                            error: {message: messages[n+"NotFound"]},
                         }
                     }
 
@@ -369,7 +374,7 @@ export default function getResolvers(p = {}) {
 
                     } catch (e){
                         return {
-                            error: {message: e.message || messages.savePostDefaultFail},
+                            error: {message: e.message || messages["save"+N+"DefaultFail"]},
                         }
                     }
 
@@ -503,7 +508,7 @@ export default function getResolvers(p = {}) {
 
                     if (!post){
                         return {
-                            error: {message: messages.postNotFound},
+                            error: {message: messages[n+"NotFound"]},
                         }
                     }
 
@@ -617,7 +622,7 @@ export default function getResolvers(p = {}) {
 
                     } catch (e){
                         return {
-                            error: {message: e.message || messages.savePostDefaultFail},
+                            error: {message: e.message || messages["save"+N+"DefaultFail"]},
                         }
                     }
 
@@ -739,7 +744,7 @@ export default function getResolvers(p = {}) {
 
                     if (!post){
                         return {
-                            error: {message: messages.postNotFound},
+                            error: {message: messages[n+"NotFound"]},
                         }
                     }
 

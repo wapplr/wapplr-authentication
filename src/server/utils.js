@@ -22,9 +22,9 @@ export async function createAnAdmin({Model, statusManager, admin = {}}) {
 
             if (userExists && userExists._id) {
 
-                if (!statusManager.isFeatured(userExists)) {
+                if (!userExists._status_isFeatured) {
 
-                    userExists[statusManager.statusField] = statusManager.getFeaturedStatus();
+                    userExists._status = statusManager.getFeaturedStatus();
                     const upgradedUser = await userExists.save();
                     if (upgradedUser) {
                         console.log("[WAPPLR-AUTHENTICATION]", "Your account with this email [" + email + "] was upgraded to admin")
@@ -41,8 +41,8 @@ export async function createAnAdmin({Model, statusManager, admin = {}}) {
 
                 const newUserData = {
                     _id: _id,
-                    [statusManager.statusField]: statusManager.getFeaturedStatus(),
-                    [statusManager.authorStatusField]: statusManager.getFeaturedStatus(),
+                    _status: statusManager.getFeaturedStatus(),
+                    _author_status: statusManager.getFeaturedStatus(),
                     _author: _id,
                     _createdDate: new Date(),
                     name,

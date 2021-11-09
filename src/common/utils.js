@@ -4,6 +4,10 @@ export const defaultDescriptor = {
     configurable: false,
 };
 
+export function capitalize(s) {
+    return s.charAt(0).toUpperCase() + s.slice(1)
+}
+
 export function mergeProperties(dest, src) {
     Object.getOwnPropertyNames(src).forEach(function forEachOwnPropertyName (name) {
         if (Object.hasOwnProperty.call(dest, name)) {

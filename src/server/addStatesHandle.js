@@ -19,15 +19,15 @@ export default function addStatesHandle(p = {}) {
                     const {filterOutputRecord} = getHelpersForResolvers({wapp, ...postType});
 
                     const user = req.wappRequest.user;
-                    const isAdmin = (user) ? postType.statusManager.isFeatured(user) : false;
+                    const isAdmin = (user) ? user._status_isFeatured : false;
                     const isAuthor = true;
-                    const isNotDeleted = (user) ? postType.statusManager.isNotDeleted(user) : true;
+                    const isNotDeleted = (user) ? user._status_isNotDeleted : true;
 
                     res.wappResponse.store.dispatch(
                         wapp.states.runAction(
                             "req", {
                                 name: "user",
-                                value: (req.wappRequest.user) ? filterOutputRecord(req.wappRequest.user, isAdmin, isAuthor, isNotDeleted) : null
+                                value: (req.wappRequest.user) ? await filterOutputRecord(req.wappRequest.user, isAdmin, isAuthor, isNotDeleted) : null
                             }
                         )
                     );
