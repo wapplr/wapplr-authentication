@@ -9,15 +9,15 @@ import getCrypto from "./crypto";
 
 export default function getResolvers(p = {}) {
 
-    const {wapp, Model, statusManager, name = "user"} = p;
-
-    const config = (p.config) ? {...p.config} : {};
+    const {wapp, name = "user", config = {}} = p;
 
     const n = name;
     const N = capitalize(n);
     const defaultConstants = getConstants(p);
 
     const {
+        Model,
+        statusManager,
         messages = defaultConstants.messages,
         labels = defaultConstants.labels,
         mailer = {
@@ -26,12 +26,9 @@ export default function getResolvers(p = {}) {
                 return new Promise(function (resolve) {return resolve();})
             }
         },
+        cookieSecret = "yourHash",
         beforeCreateResolvers,
         ...rest
-    } = config;
-
-    const {
-        cookieSecret = "yourHash",
     } = config;
 
     const session = getSession(p);
@@ -788,11 +785,26 @@ export default function getResolvers(p = {}) {
         ...(config.resolvers) ? config.resolvers : {}
     };
 
+    const helpersForResolvers = getHelpersForResolvers({wapp, Model, statusManager, messages});
+
     if (beforeCreateResolvers){
-        beforeCreateResolvers(resolvers, {...p, config: {...rest, messages, labels, mailer}});
+        beforeCreateResolvers(resolvers, {
+            ...p,
+            name,
+            helpersForResolvers,
+            config: {
+                ...rest,
+                Model,
+                statusManager,
+                messages,
+                labels,
+                mailer,
+                cookieSecret,
+                beforeCreateResolvers
+            }});
     }
 
-    const {createResolvers} = getHelpersForResolvers({wapp, Model, statusManager, messages});
+    const {createResolvers} = helpersForResolvers;
 
     return wapp.server.graphql.addResolversToTC({resolvers: createResolvers(resolvers), TCName: Model.modelName})
 }

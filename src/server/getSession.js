@@ -5,7 +5,7 @@ import {defaultDescriptor} from "./utils";
 
 export default function getSession(p = {}) {
 
-    const {wapp, database, config = {}} = p;
+    const {wapp, config = {}} = p;
 
     const globals = wapp.globals;
     const {DEV} = globals;
@@ -14,9 +14,14 @@ export default function getSession(p = {}) {
     const {app} = server;
 
     const {
+        database,
         cookieSecret = "yourHash",
         cookieOptions = {secure: "auto", signed: true, httpOnly: true, maxAge: 7 * 24 * 60 * 60 * 1000},
         cookieName = "wapplr.uid",
+        disableUseSessionMiddleware,
+    } = config;
+
+    const {
         getUser = async function({modelName, _id}) {
 
             const Model = database.models[modelName];
@@ -41,7 +46,6 @@ export default function getSession(p = {}) {
                 ...(user.toObject) ? user.toObject() : user
             };
         },
-        disableUseSessionMiddleware,
     } = config;
 
     const session = server.session || config.session || createSessionManager({

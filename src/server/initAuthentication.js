@@ -20,30 +20,36 @@ export default function initAuthentication(p = {}) {
                 enumerable: false,
                 value: async function addAuthentication(p = {}) {
 
-                    const {name = "user", admin, ...rest} = p;
+                    const {name = "user", config = {}} = p;
 
                     if (!wapp.server.postTypes){
-                        wapplrPostTypes({wapp, name, ...rest});
+                        wapplrPostTypes({wapp, name});
                     }
+
+                    const defaultConstants = getConstants(p);
+
+                    const {
+                        admin,
+                        messages = defaultConstants.messages,
+                        labels = defaultConstants.labels,
+                        ...rest
+                    } = config;
 
                     const namePattern = /^.{1,30}$/;
                     const emailPattern = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
                     const passwordPattern = /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[a-zA-Z]).{8,256}$/;
 
-                    const defaultConstants = getConstants(p);
-
-                    const messages = rest?.config?.messages || defaultConstants.messages;
-                    const labels = rest?.config?.labels || defaultConstants.labels;
-
                     const postType = await wapp.server.postTypes.getPostType({
-                        ...rest,
                         name: name,
-                        authorModelName: capitalize(name),
                         addIfThereIsNot: true,
                         config: {
-                            ...(rest.config) ? rest.config : {},
+
+                            ...rest,
+
+                            authorModelName: capitalize(name),
 
                             messages: messages,
+                            labels: labels,
 
                             schemaFields: {
                                 email: {
@@ -110,8 +116,9 @@ export default function initAuthentication(p = {}) {
                                         }
                                     }
                                 },
-                                ...(rest.config && rest.config.schemaFields) ? rest.config.schemaFields : {}
+                                ...(rest.schemaFields) ? rest.schemaFields : {}
                             },
+
                             setSchemaMiddleware: function (p) {
                                 const {schema, statusManager} = p;
                                 schema.pre("save", async function(next) {
@@ -159,8 +166,8 @@ export default function initAuthentication(p = {}) {
                                     }
                                 });
 
-                                if (rest.config.setSchemaMiddleware) {
-                                    rest.config.setSchemaMiddleware(p);
+                                if (rest.setSchemaMiddleware) {
+                                    rest.setSchemaMiddleware(p);
                                 }
                             },
                             requiredDataForStatus: {
@@ -169,24 +176,22 @@ export default function initAuthentication(p = {}) {
                                 },
                                 email: { type: String },
                                 emailConfirmed: { type: Boolean, value: true },
-                                ...(rest.config && rest.config.requiredDataForStatus) ? rest.config.requiredDataForStatus : {}
+                                ...(rest && rest.requiredDataForStatus) ? rest.requiredDataForStatus : {}
                             },
-
                             resolvers: {
                                 new: null,
-                                ...(rest.config && rest.config.postTypeResolvers) ? rest.config.postTypeResolvers : {}
+                                ...(rest && rest.postTypeResolvers) ? rest.postTypeResolvers : {}
                             },
-
-                            beforeCreateResolvers: rest.config?.postTypeBeforeCreateResolvers,
+                            beforeCreateResolvers: rest.postTypeBeforeCreateResolvers,
                         },
                     });
 
-                    getResolvers({wapp, name, ...rest, ...postType});
+                    getResolvers({wapp, name, config: {...rest, Model: postType.Model, statusManager: postType.statusManager, database: postType.database}});
 
                     const defaultAuthenticationObject = Object.create(Object.prototype, {
                         session: {
                             ...defaultDescriptor,
-                            value: getSession({wapp, name, ...rest, ...postType})
+                            value: getSession({wapp, name, config: {...rest, database: postType.database}})
                         },
                     });
 
