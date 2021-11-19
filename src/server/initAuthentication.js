@@ -118,9 +118,33 @@ export default function initAuthentication(p = {}) {
                                 },
                                 ...(rest.schemaFields) ? rest.schemaFields : {}
                             },
-
                             setSchemaMiddleware: function (p) {
+
                                 const {schema, statusManager} = p;
+
+                                schema.virtualToGraphQl({
+                                    name: "title",
+                                    get: function () {
+                                        return this.name?.first || null
+                                    },
+                                    options: {
+                                        instance: "String",
+                                        wapplr: {
+                                            finalDataFilter: function ({record, value, isAuthorOrAdmin}) {
+                                                if (isAuthorOrAdmin && record){
+                                                    return (record.name) ? record.name.last ? record.name.first + " " + record.name.last : record.name.first : null
+                                                }
+                                                return value;
+                                            },
+                                            listData: {
+                                                list: {
+                                                    show: "content"
+                                                }
+                                            }
+                                        }
+                                    }
+                                });
+
                                 schema.pre("save", async function(next) {
                                     const userId = this._id;
                                     const status = this._status;
@@ -182,7 +206,6 @@ export default function initAuthentication(p = {}) {
                                 new: null,
                                 ...(rest && rest.postTypeResolvers) ? rest.postTypeResolvers : {}
                             },
-                            beforeCreateResolvers: rest.postTypeBeforeCreateResolvers,
                         },
                     });
 
