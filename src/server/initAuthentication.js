@@ -54,6 +54,7 @@ export default function initAuthentication(p = {}) {
                             schemaFields: {
                                 email: {
                                     type: String,
+                                    unique: true,
                                     wapplr: {
                                         pattern: emailPattern,
                                         validationMessage: messages.validationEmail,

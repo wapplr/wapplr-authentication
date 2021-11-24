@@ -47,8 +47,26 @@ export default function getResolvers(p = {}) {
                 return {
                     email: "String!",
                     password: "String!",
-                    record: defaultRecord
+                    record: defaultRecord,
+                    acceptTerms: "Boolean!",
+                    acceptPrivacy: "Boolean!",
                 }
+            },
+            wapplr: {
+                acceptTerms: {
+                    wapplr: {
+                        formData: {
+                            label: labels.acceptTerms,
+                        }
+                    }
+                },
+                acceptPrivacy: {
+                    wapplr: {
+                        formData: {
+                            label: labels.acceptPrivacy,
+                        }
+                    }
+                },
             },
             resolve: async function ({input}){
 
@@ -91,10 +109,13 @@ export default function getResolvers(p = {}) {
                     } catch (e) {}
                 }
 
-                if (!allFieldsAreValid || !allRequiredFieldsAreProvided || missingPassword || invalidPassword || missingEmail || invalidEmail){
+                const acceptTerms = args.acceptTerms;
+                const acceptPrivacy = args.acceptPrivacy;
+
+                if (!allFieldsAreValid || !allRequiredFieldsAreProvided || missingPassword || invalidPassword || missingEmail || invalidEmail || !acceptTerms || !acceptPrivacy){
                     return {
                         error: {
-                            message: (!allRequiredFieldsAreProvided) ? messages.missingData : messages.invalidData,
+                            message: (!allRequiredFieldsAreProvided || missingPassword || missingEmail || !acceptTerms || !acceptPrivacy) ? messages.missingData : messages.invalidData,
                             errors: [
                                 ...mergedErrorFields,
 
@@ -102,7 +123,10 @@ export default function getResolvers(p = {}) {
                                 ...(!missingPassword && invalidPassword) ? [{path: "password", message: validationMessageForPassword}] : [],
 
                                 ...(missingEmail) ? [{path: "email", message: messages.missingEmail}] : [],
-                                ...(!missingEmail && invalidEmail) ? [{path: "email", message: validationMessageForEmail}] : []
+                                ...(!missingEmail && invalidEmail) ? [{path: "email", message: validationMessageForEmail}] : [],
+
+                                ...(!acceptTerms) ? [{path: "acceptTerms", message: messages.validationTerms}] : [],
+                                ...(!acceptPrivacy) ? [{path: "acceptPrivacy", message: messages.validationPrivacy}] : []
                             ]
                         },
                     }

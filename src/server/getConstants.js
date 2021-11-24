@@ -29,6 +29,8 @@ export default function getConstants(p = {}) {
         validationName: "Minimum 1 maximum 30 characters",
         validationEmail: "Invalid email format",
         validationPassword: "Min 8 characters both upper and lowercase",
+        validationTerms: "Acceptance of the terms is required",
+        validationPrivacy: "Acceptance of the privacy is required",
     };
 
     const labels = {
@@ -38,6 +40,8 @@ export default function getConstants(p = {}) {
         password: "Password",
         newPassword: "New password",
         emailConfirmationKey: "Email confirmation key",
+        acceptTerms: "Accept terms",
+        acceptPrivacy: "Accept privacy",
     };
 
     return {messages, labels};
