@@ -202,7 +202,3 @@ const users = response.userGetAll;
 ## License
 
 MIT
-
-## License
-
-MIT

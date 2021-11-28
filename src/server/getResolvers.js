@@ -36,9 +36,20 @@ export default function getResolvers(p = {}) {
     const {setRestoreStatusByAuthor, isDeleted, isFeatured, setNewStatus} = statusManager;
     const crypto = getCrypto({password: cookieSecret});
 
+    const emailResolverProps = {
+        email: {
+            wapplr: {
+                formData: {
+                    writeCondition: ""
+                }
+            }
+        }
+    };
+
     const resolvers = {
         signup: {
             extendResolver: "createOne",
+            skipInputPost: true,
             args: function (TC) {
 
                 const defaultResolver = TC.getResolver("createOne");
@@ -67,6 +78,7 @@ export default function getResolvers(p = {}) {
                         }
                     }
                 },
+                ...emailResolverProps
             },
             resolve: async function ({input}){
 
@@ -187,6 +199,9 @@ export default function getResolvers(p = {}) {
                 email: "String!",
                 password: "String!",
             },
+            wapplr: {
+                ...emailResolverProps
+            },
             resolve: async function ({input}) {
                 try {
                     const {post, args, req, res, editorIsAuthor} = input;
@@ -239,6 +254,7 @@ export default function getResolvers(p = {}) {
         },
         logout: {
             extendResolver: "updateById",
+            skipInputPost: true,
             args: null,
             resolve: async function ({input}) {
                 const {editor, req, res} = input;
@@ -263,6 +279,9 @@ export default function getResolvers(p = {}) {
             extendResolver: "updateById",
             args: {
                 email: "String!",
+            },
+            wapplr: {
+                ...emailResolverProps
             },
             resolve: async function ({input}) {
                 try {
@@ -414,6 +433,9 @@ export default function getResolvers(p = {}) {
                 passwordRecoveryKey: "String!",
                 password: "String!",
             },
+            wapplr: {
+                ...emailResolverProps
+            },
             resolve: async function ({input}) {
                 try {
                     const {post, args, req, res, editorIsAuthor, editor} = input;
@@ -520,6 +542,9 @@ export default function getResolvers(p = {}) {
                 _id: "MongoID!",
                 email: "String!",
                 password: "String!",
+            },
+            wapplr: {
+                ...emailResolverProps
             },
             resolve: async function ({input}) {
                 try {
@@ -669,6 +694,7 @@ export default function getResolvers(p = {}) {
                         }
                     }
                 },
+                ...emailResolverProps
             },
             resolve: async function ({input}) {
                 try {

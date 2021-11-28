@@ -59,7 +59,7 @@ export default function initAuthentication(p = {}) {
                                         pattern: emailPattern,
                                         validationMessage: messages.validationEmail,
                                         private: "author",
-                                        readOnly: true,
+                                        writeCondition: "admin",
                                         formData: {
                                             label: labels.email
                                         }
@@ -70,7 +70,7 @@ export default function initAuthentication(p = {}) {
                                     default: false,
                                     wapplr: {
                                         private: "author",
-                                        readOnly: true,
+                                        writeCondition: "admin",
                                     }
                                 },
                                 password: {
