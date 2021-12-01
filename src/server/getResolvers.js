@@ -291,7 +291,7 @@ export default function getResolvers(p = {}) {
                     if ((user && editorIsAuthor) || (user && !editor)) {
 
                         user.passwordRecoveryKey = crypto.encrypt(JSON.stringify({time: Date.now(), _id: user._id}));
-                        const savedUser = await user.save();
+                        const savedUser = await user.save({validateBeforeSave: false});
 
                         await mailer.send("resetPassword", savedUser, input);
 
@@ -397,7 +397,7 @@ export default function getResolvers(p = {}) {
                                 setRestoreStatusByAuthor(user);
                             }
 
-                            const savedUser = await user.save();
+                            const savedUser = await user.save({validateBeforeSave: false});
 
                             return {
                                 record: savedUser,
@@ -503,7 +503,7 @@ export default function getResolvers(p = {}) {
                             setRestoreStatusByAuthor(user);
                         }
 
-                        const savedUser = await user.save();
+                        const savedUser = await user.save({validateBeforeSave: false});
 
                         if (editorIsAuthor) {
                             return {
@@ -649,7 +649,7 @@ export default function getResolvers(p = {}) {
                                 setNewStatus(user);
                             }
 
-                            const savedUser = await user.save();
+                            const savedUser = await user.save({validateBeforeSave: false});
 
                             await mailer.send("emailConfirmation", savedUser, input);
 
@@ -752,7 +752,7 @@ export default function getResolvers(p = {}) {
                             setNewStatus(user);
                         }
 
-                        const savedUser = await user.save();
+                        const savedUser = await user.save({validateBeforeSave: false});
 
                         if (editorIsAuthor){
                             return {
@@ -811,7 +811,7 @@ export default function getResolvers(p = {}) {
                             user.emailConfirmationKey = crypto.encrypt(JSON.stringify({time: Date.now(), _id: user._id}));
                         }
 
-                        const savedUser = (needToSave) ? await user.save() : user;
+                        const savedUser = (needToSave) ? await user.save({validateBeforeSave: false}) : user;
 
                         await mailer.send("emailConfirmation", savedUser, input);
 
