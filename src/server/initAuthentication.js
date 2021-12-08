@@ -210,7 +210,7 @@ export default function initAuthentication(p = {}) {
                         },
                     });
 
-                    getResolvers({wapp, name, config: {...rest, Model: postType.Model, statusManager: postType.statusManager, database: postType.database}});
+                    getResolvers({wapp, name, config: {...rest, messages, labels, Model: postType.Model, statusManager: postType.statusManager, database: postType.database}});
 
                     const defaultAuthenticationObject = Object.create(Object.prototype, {
                         session: {
