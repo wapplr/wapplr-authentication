@@ -72,6 +72,9 @@ export default function initAuthentication(p = {}) {
                                         default: false,
                                         private: "author",
                                         writeCondition: "admin",
+                                        formData: {
+                                            label: labels.emailConfirmed
+                                        }
                                     }
                                 },
                                 password: {
