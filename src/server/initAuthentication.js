@@ -54,8 +54,9 @@ export default function initAuthentication(p = {}) {
                             schemaFields: {
                                 email: {
                                     type: String,
-                                    unique: true,
                                     wapplr: {
+                                        unique: true,
+                                        required: true,
                                         pattern: emailPattern,
                                         validationMessage: messages.validationEmail,
                                         private: "author",
@@ -67,8 +68,8 @@ export default function initAuthentication(p = {}) {
                                 },
                                 emailConfirmed: {
                                     type: Boolean,
-                                    default: false,
                                     wapplr: {
+                                        default: false,
                                         private: "author",
                                         writeCondition: "admin",
                                     }
