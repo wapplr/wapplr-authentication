@@ -181,7 +181,7 @@ export default function initAuthentication(p = {}) {
                                                     return await nextSave();
                                                 }
                                                 post._author_status = status;
-                                                await post.save();
+                                                await post.save({validateBeforeSave: false});
                                                 await nextSave();
                                             } else {
                                                 await next();
