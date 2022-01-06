@@ -546,6 +546,15 @@ export default function getResolvers(p = {}) {
                 newEmail: "String!",
                 password: "String!",
             },
+            wapplr: {
+                newEmail: {
+                    wapplr: {
+                        formData: {
+                            label: labels.email
+                        }
+                    }
+                }
+            },
             resolve: async function ({input}) {
                 try {
                     const {post, args, editorIsAuthor} = input;
