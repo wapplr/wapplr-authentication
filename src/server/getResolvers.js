@@ -294,11 +294,14 @@ export default function getResolvers(p = {}) {
                         const savedUser = await user.save({validateBeforeSave: false});
 
                         await mailer.send("resetPassword", savedUser, input);
-
+                        /*TODO should rewrite out logic... probably could send savedUser because after that the outputFilter remove critical data*/
                         return {
                             record: {
                                 _id: (user && editorIsAuthor) ? savedUser._id : savedUser.email,
-                                email: savedUser.email
+                                email: savedUser.email,
+                                name: {
+                                    first: savedUser.name?.first || ""
+                                }
                             }
                         }
 
@@ -540,17 +543,14 @@ export default function getResolvers(p = {}) {
             extendResolver: "updateById",
             args: {
                 _id: "MongoID!",
-                email: "String!",
+                newEmail: "String!",
                 password: "String!",
-            },
-            wapplr: {
-                ...emailResolverProps
             },
             resolve: async function ({input}) {
                 try {
                     const {post, args, editorIsAuthor} = input;
 
-                    const {email, password} = args;
+                    const {newEmail, password} = args;
 
                     if (!post){
                         return {
@@ -581,13 +581,13 @@ export default function getResolvers(p = {}) {
 
                     let invalidEmail = false;
                     let validationMessageForEmail = messages.invalidEmail;
-                    const missingEmail = (!email || typeof email !== "string");
+                    const missingEmail = (!newEmail || typeof newEmail !== "string");
 
                     if (!missingEmail) {
                         try {
                             const jsonSchema = Model.getJsonSchema({doNotDeleteDisabledFields: true});
                             const pattern = jsonSchema.properties.email?.wapplr?.pattern;
-                            if (pattern && !email.match(pattern)) {
+                            if (pattern && !newEmail.match(pattern)) {
                                 validationMessageForEmail = jsonSchema.properties.email?.wapplr?.validationMessage;
                                 invalidEmail = true;
                             }
@@ -614,7 +614,7 @@ export default function getResolvers(p = {}) {
 
                         const user = post;
 
-                        const noChanges = (user.email === email);
+                        const noChanges = (user.email === newEmail);
 
                         if (noChanges){
                             return {
@@ -628,7 +628,7 @@ export default function getResolvers(p = {}) {
                         const isMatch = await bcrypt.compare(args.password, user.password);
                         if (isMatch) {
 
-                            const existsUser = await Model.findOne({email: email});
+                            const existsUser = await Model.findOne({email: newEmail});
 
                             if (existsUser){
                                 return {
@@ -639,7 +639,7 @@ export default function getResolvers(p = {}) {
                                 }
                             }
 
-                            user.email = email;
+                            user.email = newEmail;
                             user.emailConfirmed = false;
                             user.emailConfirmationKey = crypto.encrypt(JSON.stringify({time: Date.now(), _id: user._id}));
 
