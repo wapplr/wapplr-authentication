@@ -176,7 +176,11 @@ export default function getResolvers(p = {}) {
                     setNewStatus(user);
                     const savedUser = await user.save();
 
-                    await mailer.send("signup", savedUser, input);
+                    try {
+                        await mailer.send("signup", savedUser, input);
+                    } catch (e){
+                        console.log("[WAPPLR-AUTHENTICATION] There was an issue sending email to user", e);
+                    }
 
                     await session.startAuthedSession(req, {userId: savedUser._id, modelName: Model.modelName});
                     const populatedUser = await session.populateItemMiddleware(req, res);
