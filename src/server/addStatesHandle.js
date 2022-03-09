@@ -16,7 +16,7 @@ export default function addStatesHandle(p = {}) {
 
                     const modelName = req.session.modelName;
                     const postType = await wapp.server.postTypes.getPostType({name: modelName.toLowerCase()});
-                    const {filterOutputRecord} = getHelpersForResolvers({wapp, ...postType});
+                    const {filterOutputRecord} = (postType?.Model) ? getHelpersForResolvers({wapp, ...postType}) : {filterOutputRecord: async function(user) {return user}};
 
                     const user = req.wappRequest.user;
                     const isAdmin = (user) ? user._status_isFeatured : false;
