@@ -141,7 +141,7 @@ export default function initAuthentication(p = {}) {
                                                 }
                                                 return value;
                                             },
-                                            listData: {
+                                            clientData: {
                                                 list: {
                                                     show: "content"
                                                 }
