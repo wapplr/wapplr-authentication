@@ -279,50 +279,69 @@ export default function getResolvers(p = {}) {
                 }
             },
         },
-        forgotPassword: {
-            extendResolver: "updateById",
-            args: {
-                email: "String!",
-            },
-            wapplr: {
-                ...emailResolverProps
-            },
-            resolve: async function ({input}) {
-                try {
-                    const {post, editorIsAuthor, editor} = input;
-                    const user = post;
+        forgotPassword: ()=>{
 
-                    if ((user && editorIsAuthor) || (user && !editor)) {
+            const FilteredUserType = wapp.server.graphql.schemaComposer.createObjectTC({
+                name: 'UpdateByIdUserFilteredPayload',
+                fields: {
+                    recordId: 'MongoID',
+                    record: wapp.server.graphql.schemaComposer.createObjectTC({
+                        name: N + 'Filtered',
+                        fields: {
+                            _id: "String!"
+                        }
+                    }),
+                    error: 'ErrorInterface'
+                },
+            });
 
-                        user.passwordRecoveryKey = crypto.encrypt(JSON.stringify({time: Date.now(), _id: user._id}));
-                        const savedUser = await user.save({validateBeforeSave: false});
+            return {
+                kind: "mutation",
+                type: FilteredUserType,
+                args: {
+                    email: "String!",
+                },
+                wapplr: {
+                    ...emailResolverProps
+                },
+                resolve: async function ({input}) {
+                    try {
+                        const {post, editorIsAuthor, editor} = input;
+                        const user = post;
 
-                        await mailer.send("resetPassword", savedUser, input);
-                        /*TODO should rewrite out logic... probably could send savedUser because after that the outputFilter remove critical data*/
-                        return {
-                            record: {
-                                _id: (user && editorIsAuthor) ? savedUser._id : savedUser.email,
-                                email: savedUser.email,
-                                name: {
-                                    first: savedUser.name?.first || ""
+                        if ((user && editorIsAuthor) || (user && !editor)) {
+
+                            user.passwordRecoveryKey = crypto.encrypt(JSON.stringify({time: Date.now(), _id: user._id}));
+                            const savedUser = await user.save({validateBeforeSave: false});
+
+                            await mailer.send("resetPassword", savedUser, input);
+                            /*TODO should rewrite out logic... probably could send savedUser because after that the outputFilter remove critical data*/
+                            return {
+                                record: {
+                                    _id: (user && editorIsAuthor) ? savedUser._id : savedUser.email,
+                                    email: savedUser.email,
+                                    name: {
+                                        first: savedUser.name?.first || ""
+                                    }
                                 }
                             }
-                        }
 
-                    } else {
+                        } else {
+                            return {
+                                error: {
+                                    message: messages.incorrectEmail,
+                                    errors: [{path: "email"}]
+                                },
+                            }
+                        }
+                    } catch (e) {
                         return {
-                            error: {
-                                message: messages.incorrectEmail,
-                                errors: [{path: "email"}]
-                            },
+                            error: {message: e.message || messages.signFail},
                         }
                     }
-                } catch (e) {
-                    return {
-                        error: {message: e.message || messages.signFail},
-                    }
-                }
-            },
+                },
+            }
+
         },
         changePassword: {
             extendResolver: "updateById",
