@@ -1,6 +1,7 @@
 import bcrypt from "bcrypt";
 import mongoose from "mongoose";
 import {getHelpersForResolvers} from "wapplr-posttypes/dist/server/getResolvers.js";
+import {mongooseValidationErrorOrNot} from "wapplr-posttypes/dist/server/getResolvers";
 
 import {capitalize} from "../common/utils";
 import getConstants from "./getConstants";
@@ -33,7 +34,7 @@ export default function getResolvers(p = {}) {
 
     const session = getSession(p);
 
-    const {setRestoreStatusByAuthor, isDeleted, isFeatured, setNewStatus} = statusManager;
+    const {setRestoreStatusByAuthor, isDeleted, isBanned, isNotDeleted, isFeatured, setNewStatus} = statusManager;
     const crypto = getCrypto({password: cookieSecret});
 
     const emailResolverProps = {
@@ -46,10 +47,32 @@ export default function getResolvers(p = {}) {
         }
     };
 
+    let FilteredUserType;
+
+    function createOrGetFilteredUserType() {
+        if (!FilteredUserType) {
+            FilteredUserType = wapp.server.graphql.schemaComposer.createObjectTC({
+                name: 'UpdateByIdUserFilteredPayload',
+                fields: {
+                    recordId: 'MongoID',
+                    record: wapp.server.graphql.schemaComposer.createObjectTC({
+                        name: N + 'Filtered',
+                        fields: {
+                            _id: "String!"
+                        }
+                    }),
+                    error: 'ErrorInterface'
+                },
+            });
+        }
+        return FilteredUserType;
+    }
+
     const resolvers = {
         signup: {
             extendResolver: "createOne",
             skipInputPost: true,
+            noSkipInputPostWhenUserChanged: true,
             args: function (TC) {
 
                 const defaultResolver = TC.getResolver("createOne");
@@ -221,8 +244,13 @@ export default function getResolvers(p = {}) {
                                 }
                             }
 
-                            if (isDeleted(user)) {
-                                setRestoreStatusByAuthor(user);
+                            if (!isNotDeleted(user)) {
+                                return {
+                                    error: {
+                                        message: messages.incorrectEmail,
+                                        errors: [{path: "email"}]
+                                    },
+                                };
                             }
 
                             const savedUser = await user.save();
@@ -256,44 +284,38 @@ export default function getResolvers(p = {}) {
                 }
             },
         },
-        logout: {
-            extendResolver: "updateById",
-            skipInputPost: true,
-            args: null,
-            resolve: async function ({input}) {
-                const {editor, req, res} = input;
-                let user;
-                if (editor){
-                    user = editor;
-                }
-                if (user && user._id){
-                    await session.endAuthedSession(req, res);
-                    await session.populateItemMiddleware(req, res);
-                    return {
-                        record: user,
-                    };
-                } else {
-                    return {
-                        error: {message: messages.thereWasNoUser},
+        logout: ()=>{
+
+            FilteredUserType = createOrGetFilteredUserType();
+
+            return {
+                extendResolver: "updateById",
+                type: FilteredUserType,
+                skipInputPost: true,
+                args: null,
+                resolve: async function ({input}) {
+                    const {editor, req, res} = input;
+                    let user;
+                    if (editor){
+                        user = editor;
                     }
-                }
-            },
+                    if (user && user._id){
+                        await session.endAuthedSession(req, res);
+                        await session.populateItemMiddleware(req, res);
+                        return {
+                            record: user,
+                        };
+                    } else {
+                        return {
+                            error: {message: messages.thereWasNoUser},
+                        }
+                    }
+                },
+            }
         },
         forgotPassword: ()=>{
 
-            const FilteredUserType = wapp.server.graphql.schemaComposer.createObjectTC({
-                name: 'UpdateByIdUserFilteredPayload',
-                fields: {
-                    recordId: 'MongoID',
-                    record: wapp.server.graphql.schemaComposer.createObjectTC({
-                        name: N + 'Filtered',
-                        fields: {
-                            _id: "String!"
-                        }
-                    }),
-                    error: 'ErrorInterface'
-                },
-            });
+            FilteredUserType = createOrGetFilteredUserType();
 
             return {
                 kind: "mutation",
@@ -309,20 +331,16 @@ export default function getResolvers(p = {}) {
                         const {post, editorIsAuthor, editor} = input;
                         const user = post;
 
-                        if ((user && editorIsAuthor) || (user && !editor)) {
+                        if ((user && !isBanned(user) && editorIsAuthor) || (user && !isBanned(user) && !editor)) {
 
                             user.passwordRecoveryKey = crypto.encrypt(JSON.stringify({time: Date.now(), _id: user._id}));
                             const savedUser = await user.save({validateBeforeSave: false});
 
                             await mailer.send("resetPassword", savedUser, input);
-                            /*TODO should rewrite out logic... probably could send savedUser because after that the outputFilter remove critical data*/
+
                             return {
                                 record: {
                                     _id: (user && editorIsAuthor) ? savedUser._id : savedUser.email,
-                                    email: savedUser.email,
-                                    name: {
-                                        first: savedUser.name?.first || ""
-                                    }
                                 }
                             }
 
@@ -368,7 +386,7 @@ export default function getResolvers(p = {}) {
 
                     const {password, newPassword} = args;
 
-                    if (!post){
+                    if (!post || (post && isBanned(post))){
                         return {
                             error: {message: messages[n+"NotFound"]},
                         }
@@ -460,7 +478,14 @@ export default function getResolvers(p = {}) {
                 password: "String!",
             },
             wapplr: {
-                ...emailResolverProps
+                ...emailResolverProps,
+                passwordRecoveryKey: {
+                    wapplr: {
+                        formData: {
+                            label: labels.passwordRecoveryKey,
+                        }
+                    }
+                },
             },
             resolve: async function ({input}) {
                 try {
@@ -469,7 +494,7 @@ export default function getResolvers(p = {}) {
 
                     const user = post;
 
-                    if (!user){
+                    if (!user || (user && isBanned(user))){
                         return {
                             error: {
                                 message: messages.incorrectEmail,
@@ -584,7 +609,7 @@ export default function getResolvers(p = {}) {
 
                     const {newEmail, password} = args;
 
-                    if (!post){
+                    if (!post || (post && isBanned(post))){
                         return {
                             error: {message: messages[n+"NotFound"]},
                         }
@@ -735,7 +760,7 @@ export default function getResolvers(p = {}) {
 
                     const user = post;
 
-                    if (!user){
+                    if (!user || (user && isBanned(user))){
                         return {
                             error: {
                                 message: messages.incorrectEmail,
@@ -821,7 +846,7 @@ export default function getResolvers(p = {}) {
                 try {
                     const {post, editorIsAuthor} = input;
 
-                    if (!post){
+                    if (!post || (post && isBanned(post))){
                         return {
                             error: {message: messages[n+"NotFound"]},
                         }
@@ -863,6 +888,52 @@ export default function getResolvers(p = {}) {
                     }
                 }
             },
+        },
+        delete: ()=>{
+
+            FilteredUserType = createOrGetFilteredUserType();
+
+            return {
+                extendResolver: "updateById",
+                type: FilteredUserType,
+                args: function () {
+                    return {
+                        _id: "MongoID!",
+                    }
+                },
+                resolve: async function ({input}){
+                    const {req, res, post, editorIsAuthor, editorIsAuthorOrAdmin, editorIsAdmin} = input;
+
+                    if (!post || (post && !editorIsAdmin && isBanned(post))){
+                        return {
+                            error: {message: messages[n+"NotFound"]},
+                        }
+                    }
+
+                    if (!editorIsAuthorOrAdmin || post._status_isFeatured){
+                        return {
+                            error: {message: messages.accessDenied},
+                        }
+                    }
+
+                    try {
+                        statusManager.setDeletedStatus(post);
+                        const savedPost = await post.save({validateBeforeSave: false});
+
+                        if (editorIsAuthor) {
+                            await session.endAuthedSession(req, res);
+                            await session.populateItemMiddleware(req, res);
+                        }
+
+                        return {
+                            record: savedPost,
+                        }
+                    } catch (e){
+                        return mongooseValidationErrorOrNot(e, messages["save"+N+"DefaultFail"])
+                    }
+
+                },
+            }
         },
         ...(config.resolvers) ? config.resolvers : {}
     };

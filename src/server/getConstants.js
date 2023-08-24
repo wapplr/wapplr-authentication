@@ -41,6 +41,7 @@ export default function getConstants(p = {}) {
         password: "Password",
         newPassword: "New password",
         emailConfirmationKey: "Email confirmation key",
+        passwordRecoveryKey: "Password recovery key",
         acceptTerms: "Accept terms",
         acceptPrivacy: "Accept privacy",
     };

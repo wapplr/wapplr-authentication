@@ -77,9 +77,13 @@ export default function initAuthentication(p = {}) {
                                                     keys.forEach(function (requestName) {
                                                         if (response && response[requestName] && typeof response[requestName].record !== "undefined" && !response[requestName].error){
 
-                                                            const isLogout = (requestName === name+"Logout");
-
                                                             let userId = response[requestName].record?._id;
+
+                                                            const isLogout = (
+                                                                requestName === name+"Logout" ||
+                                                                (requestName === name+"Delete" && userId && stateBeforeUserId && stateBeforeUserId.toString() === userId.toString())
+                                                            );
+
                                                             const shouldUpdateFindById = (findByIdBeforeUpdate?._id === userId);
                                                             if (isLogout && userId) {
                                                                 userId = null;
