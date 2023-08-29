@@ -2,6 +2,7 @@ import bcrypt from "bcrypt";
 import mongoose from "mongoose";
 import {getHelpersForResolvers} from "wapplr-posttypes/dist/server/getResolvers.js";
 import {mongooseValidationErrorOrNot} from "wapplr-posttypes/dist/server/getResolvers";
+import {getErrorInterface} from "graphql-compose-mongoose/lib/errors";
 
 import {capitalize} from "../common/utils";
 import getConstants from "./getConstants";
@@ -47,26 +48,9 @@ export default function getResolvers(p = {}) {
         }
     };
 
-    let FilteredUserType;
-
-    function createOrGetFilteredUserType() {
-        if (!FilteredUserType) {
-            FilteredUserType = wapp.server.graphql.schemaComposer.createObjectTC({
-                name: 'UpdateByIdUserFilteredPayload',
-                fields: {
-                    recordId: 'MongoID',
-                    record: wapp.server.graphql.schemaComposer.createObjectTC({
-                        name: N + 'Filtered',
-                        fields: {
-                            _id: "String!"
-                        }
-                    }),
-                    error: 'ErrorInterface'
-                },
-            });
-        }
-        return FilteredUserType;
-    }
+    getErrorInterface(wapp.server.graphql.schemaComposer);
+    wapp.server.graphql.schemaComposer.addTypeDefs(`type UserFiltered {_id: String!} type UpdateByIdUserFilteredPayload {recordId: MongoID record: UserFiltered error: ErrorInterface}`);
+    const FilteredUserType = wapp.server.graphql.schemaComposer.getOTC('UpdateByIdUserFilteredPayload');
 
     const resolvers = {
         signup: {
@@ -286,8 +270,6 @@ export default function getResolvers(p = {}) {
         },
         logout: ()=>{
 
-            FilteredUserType = createOrGetFilteredUserType();
-
             return {
                 extendResolver: "updateById",
                 type: FilteredUserType,
@@ -314,8 +296,6 @@ export default function getResolvers(p = {}) {
             }
         },
         forgotPassword: ()=>{
-
-            FilteredUserType = createOrGetFilteredUserType();
 
             return {
                 kind: "mutation",
@@ -890,8 +870,6 @@ export default function getResolvers(p = {}) {
             },
         },
         delete: ()=>{
-
-            FilteredUserType = createOrGetFilteredUserType();
 
             return {
                 extendResolver: "updateById",
