@@ -63,14 +63,23 @@ export default function getResolvers(p = {}) {
                 const defaultRecord = defaultResolver.args.record;
 
                 return {
+                    record: defaultRecord,
                     email: "String!",
                     password: "String!",
-                    record: defaultRecord,
+                    passwordAgain: "String!",
                     acceptTerms: "Boolean!",
                     acceptPrivacy: "Boolean!",
                 }
             },
             wapplr: {
+                passwordAgain: {
+                    wapplr: {
+                        formData: {
+                            label: labels.passwordAgain,
+                            type: "password"
+                        },
+                    }
+                },
                 acceptTerms: {
                     wapplr: {
                         formData: {
@@ -90,12 +99,17 @@ export default function getResolvers(p = {}) {
             resolve: async function ({input}){
 
                 const {args, editor, req, res, allRequiredFieldsAreProvided, allFieldsAreValid, mergedErrorFields} = input;
-                const {password, email, record} = args;
+                const {password, passwordAgain, email, record} = args;
 
                 if (editor){
                     return {
                         error: {message: messages.alreadyLoggedIn},
                     }
+                }
+
+                let passwordsNotEqual = false;
+                if (passwordAgain !== password) {
+                    passwordsNotEqual = true;
                 }
 
                 let invalidPassword = false;
@@ -131,7 +145,7 @@ export default function getResolvers(p = {}) {
                 const acceptTerms = args.acceptTerms;
                 const acceptPrivacy = args.acceptPrivacy;
 
-                if (!allFieldsAreValid || !allRequiredFieldsAreProvided || missingPassword || invalidPassword || missingEmail || invalidEmail || !acceptTerms || !acceptPrivacy){
+                if (!allFieldsAreValid || !allRequiredFieldsAreProvided || missingPassword || invalidPassword || passwordsNotEqual || missingEmail || invalidEmail || !acceptTerms || !acceptPrivacy){
                     return {
                         error: {
                             message: (!allRequiredFieldsAreProvided || missingPassword || missingEmail || !acceptTerms || !acceptPrivacy) ? messages.missingData : messages.invalidData,
@@ -140,6 +154,8 @@ export default function getResolvers(p = {}) {
 
                                 ...(missingPassword) ? [{path: "password", message: messages.missingPassword}] : [],
                                 ...(!missingPassword && invalidPassword) ? [{path: "password", message: validationMessageForPassword}] : [],
+
+                                ...(passwordsNotEqual) ? [{path: "passwordAgain", message: messages.passwordsNotEqual}] : [],
 
                                 ...(missingEmail) ? [{path: "email", message: messages.missingEmail}] : [],
                                 ...(!missingEmail && invalidEmail) ? [{path: "email", message: validationMessageForEmail}] : [],

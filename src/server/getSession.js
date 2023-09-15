@@ -29,12 +29,29 @@ export default function getSession(p = {}) {
                 return null;
             }
             let user;
+
             try {
                 const populateProperties = (config.schemaFields) ? Object.keys(config.schemaFields).filter((key)=>config.schemaFields[key].ref).map((key)=>key) : [];
                 user = Model.findOne({"_id": _id});
                 populateProperties.forEach((key)=>{
-                    user = user.populate(key);
+
+                    const required = config.schemaFields[key]?.required || config.schemaFields[key]?.wapplr?.required;
+                    const isAdmin = user._status_isFeatured;
+
+                    const ref = config.schemaFields[key].ref;
+                    const postType = wapp.server.postTypes.postTypes[ref.toLowerCase()];
+
+                    user = user.populate({
+                        path: key,
+                        ...(required && isAdmin) ? {} : {
+                            match: {
+                                _status: {$gt: postType.statusManager.statuses["created"] - 1},
+                                _author_status: {$gt: postType.authorStatusManager.statuses["created"] - 1},
+                            }
+                        }
+                    });
                 });
+
                 user = await user;
 
             } catch (e) {}
