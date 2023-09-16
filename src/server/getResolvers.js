@@ -285,78 +285,71 @@ export default function getResolvers(p = {}) {
                 }
             },
         },
-        logout: ()=>{
-
-            return {
-                extendResolver: "updateById",
-                type: FilteredUserType,
-                skipInputPost: true,
-                args: null,
-                resolve: async function ({input}) {
-                    const {editor, req, res} = input;
-                    let user;
-                    if (editor){
-                        user = editor;
+        logout: {
+            extendResolver: "updateById",
+            type: FilteredUserType,
+            skipInputPost: true,
+            args: null,
+            resolve: async function ({input}) {
+                const {editor, req, res} = input;
+                let user;
+                if (editor){
+                    user = editor;
+                }
+                if (user && user._id){
+                    await session.endAuthedSession(req, res);
+                    await session.populateItemMiddleware(req, res);
+                    return {
+                        record: user,
+                    };
+                } else {
+                    return {
+                        error: {message: messages.thereWasNoUser},
                     }
-                    if (user && user._id){
-                        await session.endAuthedSession(req, res);
-                        await session.populateItemMiddleware(req, res);
+                }
+            },
+        },
+        forgotPassword: {
+            kind: "mutation",
+            type: FilteredUserType,
+            args: {
+                email: "String!",
+            },
+            wapplr: {
+                ...emailResolverProps
+            },
+            resolve: async function ({input}) {
+                try {
+                    const {post, editorIsAuthor, editor} = input;
+                    const user = post;
+
+                    if ((user && !isBanned(user) && editorIsAuthor) || (user && !isBanned(user) && !editor)) {
+
+                        user.passwordRecoveryKey = crypto.encrypt(JSON.stringify({time: Date.now(), _id: user._id}));
+                        const savedUser = await user.save({validateBeforeSave: false});
+
+                        await mailer.send("resetPassword", savedUser, input);
+
                         return {
-                            record: user,
-                        };
+                            record: {
+                                _id: (user && editorIsAuthor) ? savedUser._id : savedUser.email,
+                            }
+                        }
+
                     } else {
                         return {
-                            error: {message: messages.thereWasNoUser},
+                            error: {
+                                message: messages.incorrectEmail,
+                                errors: [{path: "email"}]
+                            },
                         }
                     }
-                },
-            }
-        },
-        forgotPassword: ()=>{
-
-            return {
-                kind: "mutation",
-                type: FilteredUserType,
-                args: {
-                    email: "String!",
-                },
-                wapplr: {
-                    ...emailResolverProps
-                },
-                resolve: async function ({input}) {
-                    try {
-                        const {post, editorIsAuthor, editor} = input;
-                        const user = post;
-
-                        if ((user && !isBanned(user) && editorIsAuthor) || (user && !isBanned(user) && !editor)) {
-
-                            user.passwordRecoveryKey = crypto.encrypt(JSON.stringify({time: Date.now(), _id: user._id}));
-                            const savedUser = await user.save({validateBeforeSave: false});
-
-                            await mailer.send("resetPassword", savedUser, input);
-
-                            return {
-                                record: {
-                                    _id: (user && editorIsAuthor) ? savedUser._id : savedUser.email,
-                                }
-                            }
-
-                        } else {
-                            return {
-                                error: {
-                                    message: messages.incorrectEmail,
-                                    errors: [{path: "email"}]
-                                },
-                            }
-                        }
-                    } catch (e) {
-                        return {
-                            error: {message: e.message || messages.signFail},
-                        }
+                } catch (e) {
+                    return {
+                        error: {message: e.message || messages.signFail},
                     }
-                },
-            }
-
+                }
+            },
         },
         changePassword: {
             extendResolver: "updateById",
@@ -887,49 +880,46 @@ export default function getResolvers(p = {}) {
                 }
             },
         },
-        delete: ()=>{
+        delete: {
+            extendResolver: "updateById",
+            type: FilteredUserType,
+            args: function () {
+                return {
+                    _id: "MongoID!",
+                }
+            },
+            resolve: async function ({input}){
+                const {req, res, post, editorIsAuthor, editorIsAuthorOrAdmin, editorIsAdmin} = input;
 
-            return {
-                extendResolver: "updateById",
-                type: FilteredUserType,
-                args: function () {
+                if (!post || (post && !editorIsAdmin && isBanned(post))){
                     return {
-                        _id: "MongoID!",
+                        error: {message: messages[n+"NotFound"]},
                     }
-                },
-                resolve: async function ({input}){
-                    const {req, res, post, editorIsAuthor, editorIsAuthorOrAdmin, editorIsAdmin} = input;
+                }
 
-                    if (!post || (post && !editorIsAdmin && isBanned(post))){
-                        return {
-                            error: {message: messages[n+"NotFound"]},
-                        }
+                if (!editorIsAuthorOrAdmin || post._status_isFeatured){
+                    return {
+                        error: {message: messages.accessDenied},
                     }
+                }
 
-                    if (!editorIsAuthorOrAdmin || post._status_isFeatured){
-                        return {
-                            error: {message: messages.accessDenied},
-                        }
-                    }
+                try {
+                    statusManager.setDeletedStatus(post);
+                    const savedPost = await post.save({validateBeforeSave: false});
 
-                    try {
-                        statusManager.setDeletedStatus(post);
-                        const savedPost = await post.save({validateBeforeSave: false});
-
-                        if (editorIsAuthor) {
-                            await session.endAuthedSession(req, res);
-                            await session.populateItemMiddleware(req, res);
-                        }
-
-                        return {
-                            record: savedPost,
-                        }
-                    } catch (e){
-                        return mongooseValidationErrorOrNot(e, messages["save"+N+"DefaultFail"])
+                    if (editorIsAuthor) {
+                        await session.endAuthedSession(req, res);
+                        await session.populateItemMiddleware(req, res);
                     }
 
-                },
-            }
+                    return {
+                        record: savedPost,
+                    }
+                } catch (e){
+                    return mongooseValidationErrorOrNot(e, messages["save"+N+"DefaultFail"])
+                }
+
+            },
         },
         ...(config.resolvers) ? config.resolvers : {}
     };
