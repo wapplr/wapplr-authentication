@@ -247,7 +247,7 @@ export default function getResolvers(p = {}) {
                             if (!isNotDeleted(user)) {
                                 return {
                                     error: {
-                                        message: messages.incorrectEmail,
+                                        message: messages.userIsDeleted || messages.incorrectEmail,
                                         errors: [{path: "email"}]
                                     },
                                 };
