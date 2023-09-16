@@ -54,10 +54,13 @@ export default function initAuthentication(p = {}) {
                             schemaFields: {
                                 email: {
                                     type: String,
+                                    lowercase: true,
+                                    trim: true,
                                     wapplr: {
                                         unique: true,
                                         required: true,
                                         pattern: emailPattern,
+                                        transform: ["lowercase", "trim"],
                                         validationMessage: messages.validationEmail,
                                         private: "author",
                                         writeCondition: "admin",
@@ -100,8 +103,10 @@ export default function initAuthentication(p = {}) {
                                 name: {
                                     first: {
                                         type: String,
+                                        trim: true,
                                         wapplr: {
                                             pattern: namePattern,
+                                            transform: ["trim"],
                                             validationMessage: messages.validationName,
                                             required: true,
                                             formData: {
@@ -111,8 +116,10 @@ export default function initAuthentication(p = {}) {
                                     },
                                     last: {
                                         type: String,
+                                        trim: true,
                                         wapplr: {
                                             pattern: namePattern,
+                                            transform: ["trim"],
                                             validationMessage: messages.validationName,
                                             private: "author",
                                             formData: {

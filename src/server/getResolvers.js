@@ -41,6 +41,7 @@ export default function getResolvers(p = {}) {
     const emailResolverProps = {
         email: {
             wapplr: {
+                transform: ["lowercase", "trim"],
                 formData: {
                     writeCondition: ""
                 }
@@ -593,6 +594,7 @@ export default function getResolvers(p = {}) {
             wapplr: {
                 newEmail: {
                     wapplr: {
+                        transform: ["lowercase", "trim"],
                         formData: {
                             label: labels.email
                         }
