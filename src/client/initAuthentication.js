@@ -68,7 +68,7 @@ export default function initAuthentication(p = {}) {
 
                                                 if (type === "INS_RES" && payload.name === "responses"){
 
-                                                    const keys = [name+"Login", name+"Logout", name+"Signup", name+"ResetPassword", name+"Save", name+"ChangeEmail", name + "EmailConfirmation", name+"Delete"];
+                                                    const keys = [name+"Login", name+"Logout", name+"Signup", name+"ResetPassword", name+"Save", name+"ChangeEmail", name + "EmailConfirmation", name+"DeleteAccount"];
                                                     const stateBeforeUserId = wappResponse.store.getState("req.user._id");
                                                     const stateBeforeUser = wappResponse.store.getState("req.user");
                                                     const response = payload.value;
@@ -81,7 +81,7 @@ export default function initAuthentication(p = {}) {
 
                                                             const isLogout = (
                                                                 requestName === name+"Logout" ||
-                                                                (requestName === name+"Delete" && userId && stateBeforeUserId && stateBeforeUserId.toString() === userId.toString())
+                                                                (requestName === name+"DeleteAccount" && userId && stateBeforeUserId && stateBeforeUserId.toString() === userId.toString())
                                                             );
 
                                                             const shouldUpdateFindById = (findByIdBeforeUpdate?._id === userId);
@@ -95,7 +95,7 @@ export default function initAuthentication(p = {}) {
 
                                                             const changedData = (userId && !changedUser && JSON.stringify(stateBeforeUser) !== JSON.stringify(response[requestName].record));
 
-                                                            const possibleRequestsByAdmin = [name+"Save", name+"Delete"];
+                                                            const possibleRequestsByAdmin = [name+"Save"];
                                                             if (changedUser && stateBeforeUserId && userId && possibleRequestsByAdmin.indexOf(requestName) > -1) {
                                                                 changedUser = false;
                                                             }

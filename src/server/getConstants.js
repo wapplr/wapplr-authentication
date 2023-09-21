@@ -36,14 +36,22 @@ export default function getConstants(p = {}) {
 
     const labels = {
         firstName: "First name",
+        firstNamePlaceholder: "Enter your first name",
         lastName: "Last name",
+        lastNamePlaceholder: "Enter your last name",
         email: "Email",
+        emailPlaceholder: "Enter your email address",
         emailConfirmed: "Confirmed email",
         password: "Password",
+        passwordPlaceholder: "Enter your password",
         passwordAgain: "Password again",
+        passwordAgainPlaceholder: "Enter your password again",
         newPassword: "New password",
+        newPasswordPlaceholder: "Enter a new password",
         emailConfirmationKey: "Email confirmation key",
+        emailConfirmationKeyPlaceholder: "Enter your email confirmation key",
         passwordRecoveryKey: "Password recovery key",
+        passwordRecoveryKeyPlaceholder: "Enter your password recovery key",
         acceptTerms: "Accept terms",
         acceptPrivacy: "Accept privacy",
     };

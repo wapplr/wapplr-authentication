@@ -35,7 +35,7 @@ export default function getResolvers(p = {}) {
 
     const session = getSession(p);
 
-    const {setRestoreStatusByAuthor, isDeleted, isBanned, isNotDeleted, isFeatured, setNewStatus} = statusManager;
+    const {setRestoreStatusByAuthor, isDeleted, isBanned, isFeatured, setNewStatus} = statusManager;
     const crypto = getCrypto({password: cookieSecret});
 
     const emailResolverProps = {
@@ -77,6 +77,7 @@ export default function getResolvers(p = {}) {
                     wapplr: {
                         formData: {
                             label: labels.passwordAgain,
+                            placeholder: labels.passwordAgainPlaceholder,
                             type: "password"
                         },
                     }
@@ -235,42 +236,7 @@ export default function getResolvers(p = {}) {
                     const {post, args, req, res, editorIsAuthor} = input;
                     const user = post;
 
-                    if (user) {
-                        const isMatch = await bcrypt.compare(args.password, user.password);
-                        if (isMatch) {
-
-                            if (editorIsAuthor) {
-                                return {
-                                    record: user,
-                                }
-                            }
-
-                            if (!isNotDeleted(user)) {
-                                return {
-                                    error: {
-                                        message: messages.userIsDeleted || messages.incorrectEmail,
-                                        errors: [{path: "email"}]
-                                    },
-                                };
-                            }
-
-                            const savedUser = await user.save();
-                            await session.startAuthedSession(req, {userId: savedUser._id, modelName: Model.modelName});
-                            const populatedUser = await session.populateItemMiddleware(req, res);
-
-                            return {
-                                record: populatedUser,
-                            }
-
-                        } else {
-                            return {
-                                error: {
-                                    message: messages.incorrectPassword,
-                                    errors: [{path: "password"}]
-                                },
-                            }
-                        }
-                    } else {
+                    if (!user || (user && isBanned(user))){
                         return {
                             error: {
                                 message: messages.incorrectEmail,
@@ -278,6 +244,38 @@ export default function getResolvers(p = {}) {
                             },
                         }
                     }
+
+                    const isMatch = await bcrypt.compare(args.password, user.password);
+
+                    if (isMatch) {
+
+                        if (editorIsAuthor) {
+                            return {
+                                record: user,
+                            }
+                        }
+
+                        if (isDeleted(user)) {
+                            setRestoreStatusByAuthor(user);
+                        }
+
+                        const savedUser = await user.save();
+                        await session.startAuthedSession(req, {userId: savedUser._id, modelName: Model.modelName});
+                        const populatedUser = await session.populateItemMiddleware(req, res);
+
+                        return {
+                            record: populatedUser,
+                        }
+
+                    } else {
+                        return {
+                            error: {
+                                message: messages.incorrectPassword,
+                                errors: [{path: "password"}]
+                            },
+                        }
+                    }
+
                 } catch (e) {
                     return {
                         error: {message: e.message || messages.signFail},
@@ -357,6 +355,7 @@ export default function getResolvers(p = {}) {
                 _id: "MongoID!",
                 password: "String!",
                 newPassword: "String!",
+                passwordAgain: "String!",
             },
             wapplr: {
                 newPassword: {
@@ -365,8 +364,18 @@ export default function getResolvers(p = {}) {
                         validationMessage: messages.validationPassword,
                         formData: {
                             label: labels.newPassword,
+                            placeholder: labels.newPasswordPlaceholder,
                             type: "password"
                         }
+                    }
+                },
+                passwordAgain: {
+                    wapplr: {
+                        formData: {
+                            label: labels.passwordAgain,
+                            placeholder: labels.passwordAgainPlaceholder,
+                            type: "password"
+                        },
                     }
                 },
             },
@@ -374,7 +383,7 @@ export default function getResolvers(p = {}) {
                 try {
                     const {post, args, editorIsAuthor} = input;
 
-                    const {password, newPassword} = args;
+                    const {password, newPassword, passwordAgain} = args;
 
                     if (!post || (post && isBanned(post))){
                         return {
@@ -404,14 +413,20 @@ export default function getResolvers(p = {}) {
                         } catch (e) {}
                     }
 
-                    if (missingPassword || missingNewPassword || invalidNewPassword){
+                    let passwordsNotEqual = false;
+                    if (passwordAgain !== newPassword) {
+                        passwordsNotEqual = true;
+                    }
+
+                    if (missingPassword || missingNewPassword || invalidNewPassword || passwordsNotEqual){
                         return {
                             error: {
                                 message: (missingPassword || missingNewPassword) ? messages.missingData : messages.invalidData,
                                 errors: [
                                     ...(missingPassword) ? [{path: "password", message: messages.missingPassword}] : [],
                                     ...(missingNewPassword) ? [{path: "newPassword", message: messages.missingData}] : [],
-                                    ...(!missingNewPassword && invalidNewPassword) ? [{path: "newPassword", message: validationMessageForNewPassword}] : []
+                                    ...(!missingNewPassword && invalidNewPassword) ? [{path: "newPassword", message: validationMessageForNewPassword}] : [],
+                                    ...(passwordsNotEqual) ? [{path: "passwordAgain", message: messages.passwordsNotEqual}] : [],
                                 ]
                             },
                         }
@@ -465,7 +480,8 @@ export default function getResolvers(p = {}) {
             args: {
                 email: "String!",
                 passwordRecoveryKey: "String!",
-                password: "String!",
+                newPassword: "String!",
+                passwordAgain: "String!",
             },
             wapplr: {
                 ...emailResolverProps,
@@ -473,14 +489,36 @@ export default function getResolvers(p = {}) {
                     wapplr: {
                         formData: {
                             label: labels.passwordRecoveryKey,
+                            placeholder: labels.passwordRecoveryKeyPlaceholder
                         }
+                    }
+                },
+                newPassword: {
+                    wapplr: {
+                        pattern: Model.getJsonSchema({doNotDeleteDisabledFields: true}).properties.password?.wapplr?.pattern,
+                        validationMessage: messages.validationPassword,
+                        formData: {
+                            label: labels.newPassword,
+                            placeholder: labels.newPasswordPlaceholder,
+                            type: "password"
+                        }
+                    }
+                },
+                passwordAgain: {
+                    wapplr: {
+                        formData: {
+                            label: labels.passwordAgain,
+                            placeholder: labels.passwordAgainPlaceholder,
+                            type: "password"
+                        },
                     }
                 },
             },
             resolve: async function ({input}) {
                 try {
                     const {post, args, req, res, editorIsAuthor, editor} = input;
-                    const {password, passwordRecoveryKey} = args;
+
+                    const {passwordRecoveryKey, newPassword, passwordAgain} = args;
 
                     const user = post;
 
@@ -504,13 +542,13 @@ export default function getResolvers(p = {}) {
 
                     let invalidPassword = false;
                     let validationMessageForPassword = messages.invalidPassword;
-                    const missingPassword = (!password || typeof password !== "string");
+                    const missingPassword = (!newPassword || typeof newPassword !== "string");
 
                     if (!missingPassword) {
                         try {
                             const jsonSchema = Model.getJsonSchema({doNotDeleteDisabledFields: true});
                             const pattern = jsonSchema.properties.password?.wapplr?.pattern;
-                            if (pattern && !password.match(pattern)) {
+                            if (pattern && !newPassword.match(pattern)) {
                                 validationMessageForPassword = jsonSchema.properties.password?.wapplr?.validationMessage;
                                 invalidPassword = true;
                             }
@@ -519,14 +557,20 @@ export default function getResolvers(p = {}) {
 
                     const missingPasswordRecoveryKey = (!passwordRecoveryKey || typeof passwordRecoveryKey !== "string");
 
-                    if (missingPassword || invalidPassword || missingPasswordRecoveryKey){
+                    let passwordsNotEqual = false;
+                    if (passwordAgain !== newPassword) {
+                        passwordsNotEqual = true;
+                    }
+
+                    if (missingPassword || invalidPassword || missingPasswordRecoveryKey || passwordsNotEqual){
                         return {
                             error: {
                                 message: (!missingPassword && invalidPassword) ? validationMessageForPassword : (missingPassword) ? messages.missingPassword : messages.invalidPassword,
                                 errors: [
                                     ...(missingPassword) ? [{path: "password", message: messages.missingPassword}] : [],
                                     ...(!missingPassword && invalidPassword) ? [{path: "password", message: validationMessageForPassword}] : [],
-                                    ...(missingPasswordRecoveryKey) ? [{path: "passwordRecoveryKey", message: messages.missingPasswordRecoveryKey}] : []
+                                    ...(missingPasswordRecoveryKey) ? [{path: "passwordRecoveryKey", message: messages.missingPasswordRecoveryKey}] : [],
+                                    ...(passwordsNotEqual) ? [{path: "passwordAgain", message: messages.passwordsNotEqual}] : [],
                                 ]
                             },
                         }
@@ -537,7 +581,7 @@ export default function getResolvers(p = {}) {
                     if (isMatch) {
 
                         const salt = await bcrypt.genSalt(10);
-                        user.password = await bcrypt.hash(password, salt);
+                        user.password = await bcrypt.hash(newPassword, salt);
                         user.passwordRecoveryKey = null;
 
                         if (isDeleted(user)) {
@@ -589,7 +633,8 @@ export default function getResolvers(p = {}) {
                     wapplr: {
                         transform: ["lowercase", "trim"],
                         formData: {
-                            label: labels.email
+                            label: labels.email,
+                            placeholder: labels.emailPlaceholder
                         }
                     }
                 }
@@ -739,6 +784,7 @@ export default function getResolvers(p = {}) {
                     wapplr: {
                         formData: {
                             label: labels.emailConfirmationKey,
+                            placeholder: labels.emailConfirmationKeyPlaceholder
                         }
                     }
                 },
@@ -882,39 +928,120 @@ export default function getResolvers(p = {}) {
         },
         delete: {
             extendResolver: "updateById",
-            type: FilteredUserType,
             args: function () {
                 return {
                     _id: "MongoID!",
                 }
             },
             resolve: async function ({input}){
-                const {req, res, post, editorIsAuthor, editorIsAuthorOrAdmin, editorIsAdmin} = input;
 
-                if (!post || (post && !editorIsAdmin && isBanned(post))){
-                    return {
-                        error: {message: messages[n+"NotFound"]},
-                    }
-                }
+                const {post, editorIsAdmin} = input;
 
-                if (!editorIsAuthorOrAdmin || post._status_isFeatured){
+                if (!editorIsAdmin || post._status_isFeatured){
                     return {
                         error: {message: messages.accessDenied},
                     }
                 }
 
+                if (!post){
+                    return {
+                        error: {message: messages[n+"NotFound"]},
+                    }
+                }
+
                 try {
+
                     statusManager.setDeletedStatus(post);
                     const savedPost = await post.save({validateBeforeSave: false});
-
-                    if (editorIsAuthor) {
-                        await session.endAuthedSession(req, res);
-                        await session.populateItemMiddleware(req, res);
-                    }
 
                     return {
                         record: savedPost,
                     }
+                } catch (e){
+                    return mongooseValidationErrorOrNot(e, messages["save"+N+"DefaultFail"])
+                }
+
+            },
+        },
+        deleteAccount: {
+            extendResolver: "updateById",
+            type: FilteredUserType,
+            args: function () {
+                return {
+                    _id: "MongoID!",
+                    password: "String!",
+                }
+            },
+            resolve: async function ({input}){
+
+                const {req, res, post, editorIsAuthor, args} = input;
+
+                if (!editorIsAuthor || post._status_isFeatured){
+                    return {
+                        error: {message: messages.accessDenied},
+                    }
+                }
+
+                if (!post || (post && isBanned(post))){
+                    return {
+                        error: {message: messages[n+"NotFound"]},
+                    }
+                }
+
+                const {password} = args;
+
+                let invalidPassword = false;
+                let validationMessageForPassword = messages.invalidPassword;
+                const missingPassword = (!password || typeof password !== "string");
+
+                if (!missingPassword) {
+                    try {
+                        const jsonSchema = Model.getJsonSchema({doNotDeleteDisabledFields: true});
+                        const pattern = jsonSchema.properties.password?.wapplr?.pattern;
+                        if (pattern && !password.match(pattern)) {
+                            validationMessageForPassword = jsonSchema.properties.password?.wapplr?.validationMessage;
+                            invalidPassword = true;
+                        }
+                    } catch (e) {}
+                }
+
+                if (missingPassword || invalidPassword){
+                    return {
+                        error: {
+                            message: (missingPassword) ? messages.missingData : messages.invalidData,
+                            errors: [
+                                ...(missingPassword) ? [{path: "password", message: messages.missingPassword}] : [],
+                                ...(!missingPassword && invalidPassword) ? [{path: "password", message: validationMessageForPassword}] : [],
+                            ]
+                        },
+                    }
+                }
+
+                try {
+
+                    const isMatch = await bcrypt.compare(args.password, post.password);
+
+                    if (isMatch) {
+
+                        statusManager.setDeletedStatus(post);
+                        const savedPost = await post.save({validateBeforeSave: false});
+
+                        await session.endAuthedSession(req, res);
+                        await session.populateItemMiddleware(req, res);
+
+                        return {
+                            record: savedPost,
+                        }
+
+                    } else {
+                        return {
+                            error: {
+                                message: messages.incorrectPassword,
+                                errors: [{path: "password"}]
+                            },
+                        }
+                    }
+
                 } catch (e){
                     return mongooseValidationErrorOrNot(e, messages["save"+N+"DefaultFail"])
                 }

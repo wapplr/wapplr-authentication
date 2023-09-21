@@ -65,7 +65,8 @@ export default function initAuthentication(p = {}) {
                                         private: "author",
                                         writeCondition: "admin",
                                         formData: {
-                                            label: labels.email
+                                            label: labels.email,
+                                            placeholder: labels.emailPlaceholder
                                         }
                                     }
                                 },
@@ -88,7 +89,8 @@ export default function initAuthentication(p = {}) {
                                         disabled: true,
                                         formData: {
                                             label: labels.password,
-                                            type: "password"
+                                            type: "password",
+                                            placeholder: labels.passwordPlaceholder
                                         }
                                     }
                                 },
@@ -110,7 +112,8 @@ export default function initAuthentication(p = {}) {
                                             validationMessage: messages.validationName,
                                             required: true,
                                             formData: {
-                                                label: labels.firstName
+                                                label: labels.firstName,
+                                                placeholder: labels.firstNamePlaceholder
                                             }
                                         }
                                     },
@@ -123,7 +126,8 @@ export default function initAuthentication(p = {}) {
                                             validationMessage: messages.validationName,
                                             private: "author",
                                             formData: {
-                                                label: labels.lastName
+                                                label: labels.lastName,
+                                                placeholder: labels.lastNamePlaceholder
                                             }
                                         }
                                     }
