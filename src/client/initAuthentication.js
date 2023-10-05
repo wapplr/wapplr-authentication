@@ -28,7 +28,7 @@ export default function initAuthentication(p = {}) {
                 enumerable: false,
                 value: function addAuthentication(p = {}) {
 
-                    const {name = "user", ...rest} = p;
+                    const {name = "user", addKeys, keys, ...rest} = p;
 
                     const postType = wapp.client.postTypes.getPostType({
                         ...rest,
@@ -49,7 +49,12 @@ export default function initAuthentication(p = {}) {
                     const defaultAuthenticationObject = Object.create(Object.prototype, {
                         subscribeUpdateUser: {
                             ...defaultDescriptor,
-                            value: function subscribeUpdateUser() {
+                            value: function subscribeUpdateUser(p = {}) {
+
+                                const {
+                                    addKeys = [],
+                                    keys = [name+"Login", name+"Logout", name+"Signup", name+"ResetPassword", name+"Save", name+"ChangeEmail", name + "EmailConfirmation", name+"DeleteAccount", ...addKeys]
+                                } = p;
 
                                 if (wapp.states) {
                                     const statesHandleName = "subscribeFor" + name.slice(0, 1).toUpperCase() + name.slice(1);
@@ -68,7 +73,6 @@ export default function initAuthentication(p = {}) {
 
                                                 if (type === "INS_RES" && payload.name === "responses"){
 
-                                                    const keys = [name+"Login", name+"Logout", name+"Signup", name+"ResetPassword", name+"Save", name+"ChangeEmail", name + "EmailConfirmation", name+"DeleteAccount"];
                                                     const stateBeforeUserId = wappResponse.store.getState("req.user._id");
                                                     const stateBeforeUser = wappResponse.store.getState("req.user");
                                                     const response = payload.value;
@@ -153,7 +157,7 @@ export default function initAuthentication(p = {}) {
                         value: defaultAuthenticationObject
                     });
 
-                    client.authentications[name].subscribeUpdateUser();
+                    client.authentications[name].subscribeUpdateUser({addKeys, keys});
 
                     return client.authentications[name];
 
