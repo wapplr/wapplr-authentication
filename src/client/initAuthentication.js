@@ -28,7 +28,7 @@ export default function initAuthentication(p = {}) {
                 enumerable: false,
                 value: function addAuthentication(p = {}) {
 
-                    const {name = "user", addKeys, keys, ...rest} = p;
+                    const {name = "user", addRequestKeys, requestKeys, addRequestKeysForAdmin, requestKeysForAdmin, ...rest} = p;
 
                     const postType = wapp.client.postTypes.getPostType({
                         ...rest,
@@ -52,8 +52,10 @@ export default function initAuthentication(p = {}) {
                             value: function subscribeUpdateUser(p = {}) {
 
                                 const {
-                                    addKeys = [],
-                                    keys = [name+"Login", name+"Logout", name+"Signup", name+"ResetPassword", name+"Save", name+"ChangeEmail", name + "EmailConfirmation", name+"DeleteAccount", ...addKeys]
+                                    addRequestKeys = [],
+                                    requestKeys = [name+"Login", name+"Logout", name+"Signup", name+"ResetPassword", name+"Save", name+"ChangeEmail", name + "EmailConfirmation", name+"DeleteAccount", ...addRequestKeys],
+                                    addRequestKeysForAdmin = [],
+                                    requestKeysForAdmin = [name+"Save", ...addRequestKeysForAdmin]
                                 } = p;
 
                                 if (wapp.states) {
@@ -78,7 +80,7 @@ export default function initAuthentication(p = {}) {
                                                     const response = payload.value;
                                                     const findByIdBeforeUpdate = wappResponse.store.getState("res.responses."+name+"FindById");
 
-                                                    keys.forEach(function (requestName) {
+                                                    requestKeys.forEach(function (requestName) {
                                                         if (response && response[requestName] && typeof response[requestName].record !== "undefined" && !response[requestName].error){
 
                                                             let userId = response[requestName].record?._id;
@@ -99,8 +101,7 @@ export default function initAuthentication(p = {}) {
 
                                                             const changedData = (userId && !changedUser && JSON.stringify(stateBeforeUser) !== JSON.stringify(response[requestName].record));
 
-                                                            const possibleRequestsByAdmin = [name+"Save"];
-                                                            if (changedUser && stateBeforeUserId && userId && possibleRequestsByAdmin.indexOf(requestName) > -1) {
+                                                            if (changedUser && stateBeforeUserId && userId && requestKeysForAdmin.indexOf(requestName) > -1) {
                                                                 changedUser = false;
                                                             }
 
@@ -157,7 +158,7 @@ export default function initAuthentication(p = {}) {
                         value: defaultAuthenticationObject
                     });
 
-                    client.authentications[name].subscribeUpdateUser({addKeys, keys});
+                    client.authentications[name].subscribeUpdateUser({addRequestKeys, requestKeys, addRequestKeysForAdmin, requestKeysForAdmin});
 
                     return client.authentications[name];
 

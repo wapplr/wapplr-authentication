@@ -64,10 +64,11 @@ export default function initAuthentication(p = {}) {
                                         validationMessage: messages.validationEmail,
                                         private: "author",
                                         writeCondition: "admin",
+                                        removeFromQuery: ['findMany'],
                                         formData: {
                                             label: labels.email,
                                             placeholder: labels.emailPlaceholder
-                                        }
+                                        },
                                     }
                                 },
                                 emailConfirmed: {
@@ -76,6 +77,7 @@ export default function initAuthentication(p = {}) {
                                         default: false,
                                         private: "author",
                                         writeCondition: "admin",
+                                        removeFromQuery: ['findMany'],
                                         formData: {
                                             label: labels.emailConfirmed
                                         }
@@ -125,6 +127,7 @@ export default function initAuthentication(p = {}) {
                                             transform: ["trim"],
                                             validationMessage: messages.validationName,
                                             private: "author",
+                                            removeFromQuery: ['findMany'],
                                             formData: {
                                                 label: labels.lastName,
                                                 placeholder: labels.lastNamePlaceholder
