@@ -514,7 +514,7 @@ export default function getResolvers(p = {}) {
                     }
                 },
             },
-            resolve: async function ({input}) {
+            resolve: async function ({input, resolverProperties}) {
                 try {
                     const {post, args, req, res, editorIsAuthor, editor} = input;
 
@@ -539,18 +539,16 @@ export default function getResolvers(p = {}) {
                         }
                     }
 
+                    let invalidNewPassword = false;
+                    let validationMessageForNewPassword = messages.invalidPassword;
+                    const missingNewPassword = (!newPassword || typeof newPassword !== "string");
 
-                    let invalidPassword = false;
-                    let validationMessageForPassword = messages.invalidPassword;
-                    const missingPassword = (!newPassword || typeof newPassword !== "string");
-
-                    if (!missingPassword) {
+                    if (!missingNewPassword) {
                         try {
-                            const jsonSchema = Model.getJsonSchema({doNotDeleteDisabledFields: true});
-                            const pattern = jsonSchema.properties.password?.wapplr?.pattern;
+                            const pattern = resolverProperties?.wapplr?.newPassword?.wapplr?.pattern;
                             if (pattern && !newPassword.match(pattern)) {
-                                validationMessageForPassword = jsonSchema.properties.password?.wapplr?.validationMessage;
-                                invalidPassword = true;
+                                validationMessageForNewPassword = resolverProperties?.wapplr?.newPassword?.wapplr?.validationMessage;
+                                invalidNewPassword = true;
                             }
                         } catch (e) {}
                     }
@@ -562,13 +560,13 @@ export default function getResolvers(p = {}) {
                         passwordsNotEqual = true;
                     }
 
-                    if (missingPassword || invalidPassword || missingPasswordRecoveryKey || passwordsNotEqual){
+                    if (missingNewPassword || invalidNewPassword || missingPasswordRecoveryKey || passwordsNotEqual){
                         return {
                             error: {
-                                message: (!missingPassword && invalidPassword) ? validationMessageForPassword : (missingPassword) ? messages.missingPassword : messages.invalidPassword,
+                                message: (!missingNewPassword && invalidNewPassword) ? validationMessageForNewPassword : (missingNewPassword) ? messages.missingPassword : messages.invalidPassword,
                                 errors: [
-                                    ...(missingPassword) ? [{path: "password", message: messages.missingPassword}] : [],
-                                    ...(!missingPassword && invalidPassword) ? [{path: "password", message: validationMessageForPassword}] : [],
+                                    ...(missingNewPassword) ? [{path: "newPassword", message: messages.missingPassword}] : [],
+                                    ...(!missingNewPassword && invalidNewPassword) ? [{path: "newPassword", message: validationMessageForNewPassword}] : [],
                                     ...(missingPasswordRecoveryKey) ? [{path: "passwordRecoveryKey", message: messages.missingPasswordRecoveryKey}] : [],
                                     ...(passwordsNotEqual) ? [{path: "passwordAgain", message: messages.passwordsNotEqual}] : [],
                                 ]
@@ -657,20 +655,7 @@ export default function getResolvers(p = {}) {
                         }
                     }
 
-                    let invalidPassword = false;
-                    let validationMessageForPassword = messages.invalidPassword;
                     const missingPassword = (!password || typeof password !== "string");
-
-                    if (!missingPassword) {
-                        try {
-                            const jsonSchema = Model.getJsonSchema({doNotDeleteDisabledFields: true});
-                            const pattern = jsonSchema.properties.password?.wapplr?.pattern;
-                            if (pattern && !password.match(pattern)) {
-                                validationMessageForPassword = jsonSchema.properties.password?.wapplr?.validationMessage;
-                                invalidPassword = true;
-                            }
-                        } catch (e) {}
-                    }
 
                     let invalidEmail = false;
                     let validationMessageForEmail = messages.invalidEmail;
@@ -687,17 +672,16 @@ export default function getResolvers(p = {}) {
                         } catch (e) {}
                     }
 
-                    if (missingPassword || invalidPassword || missingEmail || invalidEmail){
+                    if (missingPassword || missingEmail || invalidEmail){
                         return {
                             error: {
                                 message: (missingPassword || missingEmail) ? messages.missingData : messages.invalidData,
                                 errors: [
 
                                     ...(missingPassword) ? [{path: "password", message: messages.missingPassword}] : [],
-                                    ...(!missingPassword && invalidPassword) ? [{path: "password", message: validationMessageForPassword}] : [],
 
-                                    ...(missingEmail) ? [{path: "email", message: messages.missingEmail}] : [],
-                                    ...(!missingEmail && invalidEmail) ? [{path: "email", message: validationMessageForEmail}] : []
+                                    ...(missingEmail) ? [{path: "newEmail", message: messages.missingEmail}] : [],
+                                    ...(!missingEmail && invalidEmail) ? [{path: "newEmail", message: validationMessageForEmail}] : []
                                 ]
                             },
                         }
@@ -990,28 +974,14 @@ export default function getResolvers(p = {}) {
 
                 const {password} = args;
 
-                let invalidPassword = false;
-                let validationMessageForPassword = messages.invalidPassword;
                 const missingPassword = (!password || typeof password !== "string");
 
-                if (!missingPassword) {
-                    try {
-                        const jsonSchema = Model.getJsonSchema({doNotDeleteDisabledFields: true});
-                        const pattern = jsonSchema.properties.password?.wapplr?.pattern;
-                        if (pattern && !password.match(pattern)) {
-                            validationMessageForPassword = jsonSchema.properties.password?.wapplr?.validationMessage;
-                            invalidPassword = true;
-                        }
-                    } catch (e) {}
-                }
-
-                if (missingPassword || invalidPassword){
+                if (missingPassword){
                     return {
                         error: {
                             message: (missingPassword) ? messages.missingData : messages.invalidData,
                             errors: [
                                 ...(missingPassword) ? [{path: "password", message: messages.missingPassword}] : [],
-                                ...(!missingPassword && invalidPassword) ? [{path: "password", message: validationMessageForPassword}] : [],
                             ]
                         },
                     }
