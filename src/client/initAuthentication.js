@@ -10,11 +10,24 @@ export default function initAuthentication(p = {}) {
 
     wapp.middleware.addHandle({
         user: function (req, res, next) {
+
+            if (!lastRequest) {
+
+                const appStateName = res.wappResponse.appStateName;
+                const initialState = window[appStateName];
+                lastRequest = {
+                    user: initialState.req?.user || null
+                };
+
+            }
+
             if (lastRequest?.user?._id){
                 req.wappRequest.user = lastRequest.user;
                 req.user = req.wappRequest.user;
             }
+
             lastRequest = req.wappRequest;
+
             next()
         }
     });

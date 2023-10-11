@@ -16,7 +16,7 @@ export default function addStatesHandle(p = {}) {
 
                     const modelName = req.session.modelName;
                     const postType = await wapp.server.postTypes.getPostType({name: modelName.toLowerCase()});
-                    const {filterOutputRecord} = (postType?.Model) ? getHelpersForResolvers({wapp, ...postType}) : {filterOutputRecord: async function(user) {return user}};
+                    const {filterOutputRecord} = (postType?.Model) ? getHelpersForResolvers({wapp, ...postType}) : {filterOutputRecord: async function(req, res, user) {return user}};
 
                     const user = req.wappRequest.user;
                     const isAdmin = (user) ? user._status_isFeatured : false;
@@ -27,7 +27,7 @@ export default function addStatesHandle(p = {}) {
                         wapp.states.runAction(
                             "req", {
                                 name: "user",
-                                value: (req.wappRequest.user) ? await filterOutputRecord(req.wappRequest.user, isAdmin, isAuthor, isNotDeleted) : null
+                                value: (req.wappRequest.user) ? await filterOutputRecord(req, res, req.wappRequest.user, isAdmin, isAuthor, isNotDeleted) : null
                             }
                         )
                     );
