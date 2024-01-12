@@ -8,6 +8,7 @@ import {capitalize} from "../common/utils";
 import getConstants from "./getConstants";
 import getSession from "./getSession";
 import getCrypto from "./crypto";
+import {copyObject} from "wapplr/dist/common/utils";
 
 export default function getResolvers(p = {}) {
 
@@ -96,7 +97,7 @@ export default function getResolvers(p = {}) {
                         }
                     }
                 },
-                ...emailResolverProps
+                ...copyObject(emailResolverProps)
             },
             resolve: async function ({input}){
 
@@ -229,7 +230,7 @@ export default function getResolvers(p = {}) {
                 password: "String!",
             },
             wapplr: {
-                ...emailResolverProps
+                ...copyObject(emailResolverProps)
             },
             resolve: async function ({input}) {
                 try {
@@ -314,7 +315,7 @@ export default function getResolvers(p = {}) {
                 email: "String!",
             },
             wapplr: {
-                ...emailResolverProps
+                ...copyObject(emailResolverProps)
             },
             resolve: async function ({input}) {
                 try {
@@ -484,7 +485,7 @@ export default function getResolvers(p = {}) {
                 passwordAgain: "String!",
             },
             wapplr: {
-                ...emailResolverProps,
+                ...copyObject(emailResolverProps),
                 passwordRecoveryKey: {
                     wapplr: {
                         formData: {
@@ -772,7 +773,7 @@ export default function getResolvers(p = {}) {
                         }
                     }
                 },
-                ...emailResolverProps
+                ...copyObject(emailResolverProps)
             },
             resolve: async function ({input}) {
                 try {
