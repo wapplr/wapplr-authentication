@@ -2,6 +2,7 @@ import bodyParser from 'body-parser';
 import cookieParser from 'cookie-parser';
 import createSessionManager from "./sessionManager";
 import {defaultDescriptor} from "./utils";
+import {deCapitalize} from "../common/utils";
 
 export default function getSession(p = {}) {
 
@@ -39,7 +40,7 @@ export default function getSession(p = {}) {
                     const isAdmin = user._status_isFeatured;
 
                     const ref = config.schemaFields[key].ref;
-                    const postType = wapp.server.postTypes.postTypes[ref.toLowerCase()];
+                    const postType = wapp.server.postTypes.postTypes[deCapitalize(ref)];
 
                     user = user.populate({
                         path: key,

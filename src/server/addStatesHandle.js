@@ -1,4 +1,5 @@
 import {getHelpersForResolvers} from "wapplr-posttypes/dist/server/getResolvers.js";
+import {deCapitalize} from "../common/utils";
 
 export default function addStatesHandle(p = {}) {
 
@@ -15,7 +16,7 @@ export default function addStatesHandle(p = {}) {
                 if (changed) {
 
                     const modelName = req.session.modelName;
-                    const postType = await wapp.server.postTypes.getPostType({name: modelName.toLowerCase()});
+                    const postType = await wapp.server.postTypes.getPostType({name: deCapitalize(modelName)});
                     const {filterOutputRecord} = (postType?.Model) ? getHelpersForResolvers({wapp, ...postType}) : {filterOutputRecord: async function(req, res, user) {return user}};
 
                     const user = req.wappRequest.user;
