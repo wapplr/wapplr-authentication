@@ -183,7 +183,7 @@ export default function getResolvers(p = {}) {
                         }
                     }
 
-                    const newId = mongoose.Types.ObjectId();
+                    const newId = new mongoose.Types.ObjectId();
                     const salt = await bcrypt.genSalt(10);
                     const hashedPassword = await bcrypt.hash(password, salt);
 
